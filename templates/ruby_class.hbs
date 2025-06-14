@@ -1,0 +1,61 @@
+# {{ StructName }} model representing {{ TableName }} table
+{{#if Imports}}
+{{#each Imports}}
+require '{{this}}'
+{{/each}}
+
+{{/if}}
+require 'json'
+require 'time'
+
+class {{ StructName }}
+{{#each Columns}}
+  attr_accessor :{{ FieldName }}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+{{/each}}
+
+  def initialize(
+{{#each Columns}}
+    {{ FieldName }}: nil{{#unless @last}},{{/unless}}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+{{/each}}
+  )
+{{#each Columns}}
+    @{{ FieldName }} = {{ FieldName }}
+{{/each}}
+  end
+
+  # Create {{ StructName }} from hash
+  def self.from_hash(data)
+    new(
+{{#each Columns}}
+      {{ FieldName }}: data['{{ OriginalColumnName }}'] || data[:{{ FieldName }}]{{#unless @last}},{{/unless}}
+{{/each}}
+    )
+  end
+
+  # Convert {{ StructName }} to hash
+  def to_hash
+    {
+{{#each Columns}}
+      '{{ OriginalColumnName }}' => @{{ FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+    }
+  end
+
+  # Convert {{ StructName }} to JSON
+  def to_json(*args)
+    to_hash.to_json(*args)
+  end
+
+  # String representation
+  def to_s
+    "#<{{ StructName }}:0x#{object_id.to_s(16)} " +
+{{#each Columns}}
+      "{{ FieldName }}=#{@{{ FieldName }}.inspect}{{#unless @last}}, {{/unless}}"{{#unless @last}} +{{/unless}}
+{{/each}} + ">"
+  end
+
+  # Inspection
+  def inspect
+    to_s
+  end
+end

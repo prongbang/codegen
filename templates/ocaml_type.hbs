@@ -1,0 +1,55 @@
+(* {{ StructName }} type representing {{ TableName }} table *)
+(* Generated from database *)
+
+{{#if Imports}}
+{{#each Imports}}
+open {{this}}
+{{/each}}
+
+{{/if}}
+open Yojson.Safe.Util
+
+(* {{ StructName }} record type representing {{ TableName }} table *)
+type {{ FieldName | to_snake_case }} = {
+{{#each Columns}}
+  {{#if ColumnComment}}
+  (* {{ ColumnComment }} *)
+  {{/if}}
+  {{ FieldName | to_snake_case }}: {{ LangType }};{{#if ColumnComment}} (* {{ ColumnComment }} *){{/if}}
+{{/each}}
+}
+
+(* JSON conversion functions *)
+let {{ FieldName | to_snake_case }}_of_yojson json =
+  try
+    Ok {
+{{#each Columns}}
+      {{ FieldName | to_snake_case }} = json |> member "{{ OriginalColumnName }}" |> {{#if IsNullable}}to_option {{/if}}{{#if (eq LangType "string")}}to_string{{else}}{{#if (eq LangType "int")}}to_int{{else}}{{#if (eq LangType "bool")}}to_bool{{else}}{{#if (eq LangType "float")}}to_float{{else}}to_string{{/if}}{{/if}}{{/if}}{{/if}};
+{{/each}}
+    }
+  with
+  | Yojson.Json_error msg -> Error ("JSON parsing error: " ^ msg)
+  | _ -> Error "Unknown JSON parsing error"
+
+let {{ FieldName | to_snake_case }}_to_yojson record =
+  `Assoc [
+{{#each Columns}}
+    ("{{ OriginalColumnName }}", {{#if IsNullable}}match record.{{ FieldName | to_snake_case }} with | Some v -> {{/if}}{{#if (eq LangType "string")}}`String record.{{ FieldName | to_snake_case }}{{else}}{{#if (eq LangType "int")}}`Int record.{{ FieldName | to_snake_case }}{{else}}{{#if (eq LangType "bool")}}`Bool record.{{ FieldName | to_snake_case }}{{else}}{{#if (eq LangType "float")}}`Float record.{{ FieldName | to_snake_case }}{{else}}`String (string_of_{{ LangType }} record.{{ FieldName | to_snake_case }}){{/if}}{{/if}}{{/if}}{{/if}}{{#if IsNullable}} | None -> `Null{{/if}});
+{{/each}}
+  ]
+
+(* Helper function to create {{ StructName }} *)
+let make_{{ FieldName | to_snake_case }}{{#each Columns}} ~{{ FieldName | to_snake_case }}{{/each}} () =
+  {
+{{#each Columns}}
+    {{ FieldName | to_snake_case }};
+{{/each}}
+  }
+
+(* Pretty printer *)
+let pp_{{ FieldName | to_snake_case }} fmt record =
+  Format.fprintf fmt "{{ StructName }} { ";
+{{#each Columns}}
+  Format.fprintf fmt "{{ FieldName | to_snake_case }} = %s; " {{#if IsNullable}}(match record.{{ FieldName | to_snake_case }} with Some v -> string_of_{{ LangType }} v | None -> "None"){{else}}(string_of_{{ LangType }} record.{{ FieldName | to_snake_case }}){{/if}};
+{{/each}}
+  Format.fprintf fmt "}"

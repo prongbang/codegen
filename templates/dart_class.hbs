@@ -1,0 +1,88 @@
+// {{ StructName }} model representing {{ TableName }} table
+// Generated from database
+
+{{#if Imports}}
+{{#each Imports}}
+import '{{this}}';
+{{/each}}
+
+{{/if}}
+
+/// {{ StructName }} class representing {{ TableName }} table
+class {{ StructName }} {
+{{#each Columns}}
+  {{#if ColumnComment}}
+  /// {{ ColumnComment }}
+  {{/if}}
+  {{#if LangTags}}
+  {{{ LangTags }}}
+  {{/if}}
+  final {{ LangType }} {{ FieldName }};
+{{/each}}
+
+  // Constructor
+  const {{ StructName }}({
+{{#each Columns}}
+    {{#if IsNullable}}this.{{ FieldName }},{{else}}required this.{{ FieldName }},{{/if}}{{#if ColumnComment}} // {{ ColumnComment }}{{/if}}
+{{/each}}
+  });
+
+  /// Create {{ StructName }} from JSON map
+  factory {{ StructName }}.fromJson(Map<String, dynamic> json) {
+    return {{ StructName }}(
+{{#each Columns}}
+      {{ FieldName }}: json['{{ OriginalColumnName }}']{{#if IsNullable}}{{else}} ?? (throw ArgumentError('{{ OriginalColumnName }} is required')){{/if}},
+{{/each}}
+    );
+  }
+
+  /// Convert {{ StructName }} to JSON map
+  Map<String, dynamic> toJson() {
+    return {
+{{#each Columns}}
+      '{{ OriginalColumnName }}': {{ FieldName }},
+{{/each}}
+    };
+  }
+
+  /// Create copy of {{ StructName }} with updated fields
+  {{ StructName }} copyWith({
+{{#each Columns}}
+    {{ LangType }}? {{ FieldName }},
+{{/each}}
+  }) {
+    return {{ StructName }}(
+{{#each Columns}}
+      {{ FieldName }}: {{ FieldName }} ?? this.{{ FieldName }},
+{{/each}}
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is {{ StructName }} &&
+{{#each Columns}}
+        other.{{ FieldName }} == {{ FieldName }}{{#unless @last}} &&{{/unless}}
+{{/each}};
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+{{#each Columns}}
+      {{ FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+    );
+  }
+
+  @override
+  String toString() {
+    return '{{ StructName }}(' +
+{{#each Columns}}
+        '{{ FieldName }}: ${{ FieldName }}' +{{#unless @last}}
+        ', ' +{{/unless}}
+{{/each}}
+        ')';
+  }
+}

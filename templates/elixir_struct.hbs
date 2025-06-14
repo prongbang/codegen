@@ -1,0 +1,84 @@
+# {{ StructName }} struct representing {{ TableName }} table
+# Generated from database
+
+defmodule {{ StructName }} do
+  @moduledoc """
+  {{ StructName }} struct representing {{ TableName }} table
+  """
+
+  {{#if Imports}}
+  {{#each Imports}}
+  require {{this}}
+  {{/each}}
+
+  {{/if}}
+  
+  @derive {Jason.Encoder, except: []}
+  defstruct [
+{{#each Columns}}
+    {{#if ColumnComment}}
+    # {{ ColumnComment }}
+    {{/if}}
+    :{{ to_snake_case FieldName }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+{{/each}}
+  ]
+
+  @type t :: %__MODULE__{
+{{#each Columns}}
+    {{ to_snake_case FieldName }}: {{ LangType }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+{{/each}}
+  }
+
+  @doc """
+  Create a new {{ StructName }} struct
+  """
+  def new(attrs \\ %{}) do
+    %__MODULE__{
+{{#each Columns}}
+      {{ to_snake_case FieldName }}: Map.get(attrs, "{{ OriginalColumnName }}", {{#if IsNullable}}nil{{else}}""{{/if}}){{#unless @last}},{{/unless}}
+{{/each}}
+    }
+  end
+
+  @doc """
+  Convert {{ StructName }} to map
+  """
+  def to_map(%__MODULE__{} = struct) do
+    %{
+{{#each Columns}}
+      "{{ OriginalColumnName }}" => struct.{{ to_snake_case FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+    }
+  end
+
+  @doc """
+  Parse {{ StructName }} from JSON
+  """
+  def from_json(json) when is_binary(json) do
+    case Jason.decode(json) do
+      {:ok, data} -> {:ok, new(data)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Convert {{ StructName }} to JSON
+  """
+  def to_json(%__MODULE__{} = struct) do
+    struct
+    |> to_map()
+    |> Jason.encode()
+  end
+
+  @doc """
+  Changeset for {{ StructName }}
+  """
+  def changeset(%__MODULE__{} = struct, attrs) do
+    # This would typically use Ecto.Changeset in a real Phoenix app
+    %{struct | 
+{{#each Columns}}
+      {{ to_snake_case FieldName }}: Map.get(attrs, "{{ OriginalColumnName }}", struct.{{ to_snake_case FieldName }}){{#unless @last}},{{/unless}}
+{{/each}}
+    }
+  end
+end

@@ -1,0 +1,193 @@
+# Database Code Generator Configuration
+# This file defines how to connect to databases and generate code
+
+# Active database to use for generation
+active_database: "sqlite_local"
+
+# Database configurations
+databases:
+  mysql_dev:
+    db_type: "mysql"
+    dsn: "mysql://root:password@localhost:3306/your_mysql_database"
+    db_name: "your_mysql_database"
+
+  postgres_qa:
+    db_type: "postgres"
+    dsn: "postgres://user:password@localhost:5432/your_postgres_database"
+    db_name: "your_postgres_database"
+
+  sqlite_local:
+    db_type: "sqlite"
+    dsn: "sqlite:./data/test.db"
+    db_name: "main"
+
+# Code generation settings
+generation:
+  # Languages to generate code for
+  target_languages:
+    - "rust"
+    - "typescript"
+    - "go"
+    - "python"
+    - "java"
+    - "csharp"
+
+  # Output directory for generated files
+  output_dir: "./generated"
+
+  # Template directory for custom templates (optional)
+  template_dir: "./templates"
+
+  # Table filtering patterns (optional)
+  table_patterns:
+    include:
+      - "*" # Include all tables by default
+    exclude:
+      - "_*" # Exclude tables starting with underscore
+      - "migrations" # Exclude migration tables
+      - "schema_*" # Exclude schema tables
+
+# Language-specific configurations
+# All fields are optional with sensible defaults:
+# - template_file, template_path, output_extension: auto-detected
+# - nullable_strategy: defaults to "generic"
+languages:
+  rust:
+    nullable_strategy: "option"
+    # Optional custom tags example:
+    # tags:
+    #   - '#[serde(rename = "{{ OriginalColumnName }}")]'
+    #   - '#[sqlx(rename = "{{ OriginalColumnName }}")]'
+
+  typescript:
+    nullable_strategy: "union"
+
+  go:
+    nullable_strategy: "pointer"
+    package_name: "domain"
+    field_name_case: "camelCase"
+    # Optional custom tags example:
+    tags:
+      - 'json:"{{ FieldName }}"'
+      - 'gorm:"column:{{ OriginalColumnName }}"'
+      - 'db:"{{ OriginalColumnName }}"'
+
+  python:
+    nullable_strategy: "optional"
+    # Optional custom tags example:
+    # tags:
+    #   - '@field(metadata={"db_column": "{{ OriginalColumnName }}"})'
+
+  java:
+    nullable_strategy: "optional"
+    # Optional custom tags example:
+    # tags:
+    #   - '@JsonProperty("{{ OriginalColumnName }}")'
+    #   - '@Column(name = "{{ OriginalColumnName }}")'
+
+  csharp:
+    nullable_strategy: "nullable"
+    # Optional custom tags example:
+    # tags:
+    #   - '[JsonProperty("{{ OriginalColumnName }}")]'
+    #   - '[Column("{{ OriginalColumnName }}")]'
+
+# Type mappings (built-in, can be overridden if needed)
+type_mappings:
+  mysql:
+    varchar:
+      generic: "string"
+      go: "string"
+      rust: "String"
+      typescript: "string"
+      csharp: "string"
+      java: "String"
+      python: "str"
+
+    int:
+      generic: "integer"
+      go: "int64"
+      rust: "i64"
+      typescript: "number"
+      csharp: "int"
+      java: "Integer"
+      python: "int"
+
+    datetime:
+      generic: "datetime"
+      go: "time.Time"
+      rust: "chrono::NaiveDateTime"
+      typescript: "Date"
+      csharp: "DateTime"
+      java: "LocalDateTime"
+      python: "datetime"
+
+    tinyint:
+      generic: "boolean"
+      go: "bool"
+      rust: "bool"
+      typescript: "boolean"
+      csharp: "bool"
+      java: "Boolean"
+      python: "bool"
+
+  postgres:
+    text:
+      generic: "string"
+      go: "string"
+      rust: "String"
+      typescript: "string"
+      csharp: "string"
+      java: "String"
+      python: "str"
+
+    int8:
+      generic: "integer"
+      go: "int64"
+      rust: "i64"
+      typescript: "number"
+      csharp: "long"
+      java: "Long"
+      python: "int"
+
+    bool:
+      generic: "boolean"
+      go: "bool"
+      rust: "bool"
+      typescript: "boolean"
+      csharp: "bool"
+      java: "Boolean"
+      python: "bool"
+
+    uuid:
+      generic: "string"
+      go: "string"
+      rust: "uuid::Uuid"
+      typescript: "string"
+      csharp: "Guid"
+      java: "UUID"
+      python: "UUID"
+
+  sqlite:
+    TEXT:
+      generic: "string"
+      go: "string"
+      rust: "String"
+      typescript: "string"
+      csharp: "string"
+      java: "String"
+      python: "str"
+
+    INTEGER:
+      generic: "integer"
+      go: "int64"
+      rust: "i64"
+      typescript: "number"
+      csharp: "long"
+      java: "Long"
+      python: "int"
+
+# Naming conventions (optional - defaults exist)
+naming_conventions:
+  table_to_struct_case: "PascalCase"
+  column_to_field_case: "camelCase"

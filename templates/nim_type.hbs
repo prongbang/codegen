@@ -1,0 +1,78 @@
+# {{ StructName }} model representing {{ TableName }} table
+# Generated from database
+
+{{#if Imports}}
+{{#each Imports}}
+import {{this}}
+{{/each}}
+
+{{/if}}
+import json, options, tables
+
+type
+  {{ StructName }}* = object
+{{#each Columns}}
+    {{#if ColumnComment}}
+    ## {{ ColumnComment }}
+    {{/if}}
+    {{ FieldName }}*: {{ LangType }}{{#if ColumnComment}} ## {{ ColumnComment }}{{/if}}
+{{/each}}
+
+# Procedures for {{ StructName }}
+
+proc new{{ StructName }}*(
+{{#each Columns}}
+  {{ FieldName }}: {{ LangType }}{{#unless @last}};{{/unless}}{{#if ColumnComment}} ## {{ ColumnComment }}{{/if}}
+{{/each}}
+): {{ StructName }} =
+  ## Create a new {{ StructName }} instance
+  result.{{ FieldName }} = {{ FieldName }}
+{{#each Columns}}
+  result.{{ FieldName }} = {{ FieldName }}
+{{/each}}
+
+proc fromJson*(json: JsonNode, T: typedesc[{{ StructName }}]): {{ StructName }} =
+  ## Create {{ StructName }} from JSON
+  result = {{ StructName }}()
+{{#each Columns}}
+  {{#if IsNullable}}
+  if json.hasKey("{{ OriginalColumnName }}") and json["{{ OriginalColumnName }}"].kind != JNull:
+    result.{{ FieldName }} = some(json["{{ OriginalColumnName }}"].get{{#if (eq LangType "string")}}Str{{else}}{{#if (eq LangType "int")}}Int{{else}}{{#if (eq LangType "bool")}}Bool{{else}}{{#if (eq LangType "float")}}Float{{else}}Str{{/if}}{{/if}}{{/if}}{{/if}}())
+  {{else}}
+  result.{{ FieldName }} = json["{{ OriginalColumnName }}"].get{{#if (eq LangType "string")}}Str{{else}}{{#if (eq LangType "int")}}Int{{else}}{{#if (eq LangType "bool")}}Bool{{else}}{{#if (eq LangType "float")}}Float{{else}}Str{{/if}}{{/if}}{{/if}}{{/if}}()
+  {{/if}}
+{{/each}}
+
+proc toJson*(obj: {{ StructName }}): JsonNode =
+  ## Convert {{ StructName }} to JSON
+  result = newJObject()
+{{#each Columns}}
+  {{#if IsNullable}}
+  if obj.{{ FieldName }}.isSome:
+    result["{{ OriginalColumnName }}"] = %obj.{{ FieldName }}.get()
+  else:
+    result["{{ OriginalColumnName }}"] = newJNull()
+  {{else}}
+  result["{{ OriginalColumnName }}"] = %obj.{{ FieldName }}
+  {{/if}}
+{{/each}}
+
+proc toTable*(obj: {{ StructName }}): Table[string, string] =
+  ## Convert {{ StructName }} to Table
+  result = initTable[string, string]()
+{{#each Columns}}
+  {{#if IsNullable}}
+  if obj.{{ FieldName }}.isSome:
+    result["{{ OriginalColumnName }}"] = $obj.{{ FieldName }}.get()
+  {{else}}
+  result["{{ OriginalColumnName }}"] = $obj.{{ FieldName }}
+  {{/if}}
+{{/each}}
+
+proc `$`*(obj: {{ StructName }}): string =
+  ## String representation of {{ StructName }}
+  result = "{{ StructName }}(" &
+{{#each Columns}}
+    "{{ FieldName }}: " & $obj.{{ FieldName }}{{#unless @last}} & ", " &{{/unless}}
+{{/each}} &
+    ")"

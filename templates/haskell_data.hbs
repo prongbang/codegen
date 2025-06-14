@@ -1,0 +1,48 @@
+-- {{ StructName }} data type representing {{ TableName }} table
+-- Generated from database
+
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
+
+module {{ StructName }} where
+
+{{#if Imports}}
+{{#each Imports}}
+import {{this}}
+{{/each}}
+
+{{/if}}
+import Data.Aeson
+import GHC.Generics
+
+-- | {{ StructName }} data type representing {{ TableName }} table
+data {{ StructName }} = {{ StructName }}
+  { {{#each Columns}}{{ FieldName }} :: {{ LangType }}{{#if ColumnComment}} -- ^ {{ ColumnComment }}{{/if}}{{#unless @last}}
+  , {{/unless}}{{/each}}
+  } deriving (Show, Eq, Generic)
+
+-- JSON serialization instances
+instance ToJSON {{ StructName }} where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = \field -> case field of
+{{#each Columns}}
+        "{{ FieldName }}" -> "{{ OriginalColumnName }}"
+{{/each}}
+        _ -> field
+    }
+
+instance FromJSON {{ StructName }} where
+  parseJSON = genericParseJSON defaultOptions
+    { fieldLabelModifier = \field -> case field of
+{{#each Columns}}
+        "{{ FieldName }}" -> "{{ OriginalColumnName }}"
+{{/each}}
+        _ -> field
+    }
+
+-- | Create {{ StructName }} with all fields
+make{{ StructName }} :: {{#each Columns}}{{ LangType }} -> {{/each}}{{ StructName }}
+make{{ StructName }}{{#each Columns}} {{ FieldName }}{{/each}} = {{ StructName }}
+  { {{#each Columns}}{{ FieldName }} = {{ FieldName }}{{#unless @last}}
+  , {{/unless}}{{/each}}
+  }

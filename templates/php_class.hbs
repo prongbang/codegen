@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+{{#if Imports}}
+{{#each Imports}}
+use {{this}};
+{{/each}}
+
+{{/if}}
+
+/**
+ * {{ StructName }} model representing {{ TableName }} table
+ */
+class {{ StructName }}
+{
+{{#each Columns}}
+    {{#if LangTags}}
+    {{{ LangTags }}}
+    {{/if}}
+    public {{ LangType }} ${{ FieldName }};{{#if ColumnComment}} // {{ ColumnComment }}{{/if}}
+
+{{/each}}
+    public function __construct(
+{{#each Columns}}
+        {{ LangType }} ${{ FieldName }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} // {{ ColumnComment }}{{/if}}
+{{/each}}
+    ) {
+{{#each Columns}}
+        $this->{{ FieldName }} = ${{ FieldName }};
+{{/each}}
+    }
+
+    /**
+     * Create {{ StructName }} from array
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+{{#each Columns}}
+            {{ FieldName }}: $data['{{ OriginalColumnName }}'] ?? null{{#unless @last}},{{/unless}}
+{{/each}}
+        );
+    }
+
+    /**
+     * Convert {{ StructName }} to array
+     */
+    public function toArray(): array
+    {
+        return [
+{{#each Columns}}
+            '{{ OriginalColumnName }}' => $this->{{ FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+        ];
+    }
+
+    /**
+     * Convert {{ StructName }} to JSON
+     */
+    public function toJson(): string
+    {
+        return json_encode($this->toArray());
+    }
+}

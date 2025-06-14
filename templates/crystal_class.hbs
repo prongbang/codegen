@@ -1,0 +1,61 @@
+# {{ StructName }} class representing {{ TableName }} table
+# Generated from database
+
+{{#if Imports}}
+{{#each Imports}}
+require "{{this}}"
+{{/each}}
+
+{{/if}}
+require "json"
+
+# {{ StructName }} class representing {{ TableName }} table
+class {{ StructName }}
+  include JSON::Serializable
+
+{{#each Columns}}
+  {{#if ColumnComment}}
+  # {{ ColumnComment }}
+  {{/if}}
+  {{#if LangTags}}
+  {{{ LangTags }}}
+  {{/if}}
+  @[JSON::Field(key: "{{ OriginalColumnName }}")]
+  property {{ to_snake_case FieldName }} : {{ LangType }}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+
+{{/each}}
+  def initialize(
+{{#each Columns}}
+    @{{ to_snake_case FieldName }} : {{ LangType }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} # {{ ColumnComment }}{{/if}}
+{{/each}}
+  )
+  end
+
+  # Create {{ StructName }} from Hash
+  def self.from_hash(hash : Hash(String, JSON::Any))
+    new(
+{{#each Columns}}
+      {{ to_snake_case FieldName }}: hash["{{ OriginalColumnName }}"]{{#if IsNullable}}?{{/if}}.as_{{#if (eq LangType "String")}}s{{else}}{{#if (eq LangType "Int32")}}i{{else}}{{#if (eq LangType "Bool")}}bool{{else}}{{#if (eq LangType "Float64")}}f{{else}}s{{/if}}{{/if}}{{/if}}{{/if}}{{#if IsNullable}} || nil{{/if}}{{#unless @last}},{{/unless}}
+{{/each}}
+    )
+  end
+
+  # Convert {{ StructName }} to Hash
+  def to_hash
+    {
+{{#each Columns}}
+      "{{ OriginalColumnName }}" => @{{ to_snake_case FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+    }
+  end
+
+  # String representation
+  def to_s(io)
+    io << "{{ StructName }}("
+{{#each Columns}}
+    io << "{{ to_snake_case FieldName }}: #{@{{ to_snake_case FieldName }}}"
+    {{#unless @last}}io << ", "{{/unless}}
+{{/each}}
+    io << ")"
+  end
+end

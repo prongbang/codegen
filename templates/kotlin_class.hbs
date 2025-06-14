@@ -1,0 +1,66 @@
+// {{ StructName }} model representing {{ TableName }} table
+// Generated from database
+
+{{#if Imports}}
+{{#each Imports}}
+import {{this}}
+{{/each}}
+
+{{/if}}
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+/**
+ * {{ StructName }} data class representing {{ TableName }} table
+ */
+@Serializable
+data class {{ StructName }}(
+{{#each Columns}}
+    {{#if ColumnComment}}
+    /**
+     * {{ ColumnComment }}
+     */
+    {{/if}}
+    {{#if LangTags}}
+    {{{ LangTags }}}
+    {{/if}}
+    @SerialName("{{ OriginalColumnName }}")
+    val {{ FieldName }}: {{ LangType }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} // {{ ColumnComment }}{{/if}}
+{{/each}}
+) {
+    companion object {
+        /**
+         * Create {{ StructName }} from Map
+         */
+        fun fromMap(data: Map<String, Any?>): {{ StructName }} {
+            return {{ StructName }}(
+{{#each Columns}}
+                {{ FieldName }} = data["{{ OriginalColumnName }}"] as? {{ LangType }}{{#if IsNullable}}{{else}} ?: throw IllegalArgumentException("{{ OriginalColumnName }} is required"){{/if}}{{#unless @last}},{{/unless}}
+{{/each}}
+            )
+        }
+    }
+
+    /**
+     * Convert {{ StructName }} to Map
+     */
+    fun toMap(): Map<String, Any?> {
+        return mapOf(
+{{#each Columns}}
+            "{{ OriginalColumnName }}" to {{ FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+        )
+    }
+
+    /**
+     * String representation for debugging
+     */
+    override fun toString(): String {
+        return "{{ StructName }}(" +
+{{#each Columns}}
+                "{{ FieldName }}=${{ FieldName }}" +{{#unless @last}}
+                ", " +{{/unless}}
+{{/each}}
+                ")"
+    }
+}

@@ -1,0 +1,95 @@
+// {{ StructName }} model representing {{ TableName }} table
+// Generated from database
+
+{{#if Imports}}
+{{#each Imports}}
+import {{this}}
+{{/each}}
+
+{{/if}}
+import Foundation
+
+/**
+ {{ StructName }} struct representing {{ TableName }} table
+ */
+struct {{ StructName }}: Codable, Hashable {
+{{#each Columns}}
+    {{#if ColumnComment}}
+    /// {{ ColumnComment }}
+    {{/if}}
+    {{#if LangTags}}
+    {{{ LangTags }}}
+    {{/if}}
+    let {{ FieldName }}: {{ LangType }}
+{{/each}}
+
+    // MARK: - CodingKeys
+    private enum CodingKeys: String, CodingKey {
+{{#each Columns}}
+        case {{ FieldName }} = "{{ OriginalColumnName }}"
+{{/each}}
+    }
+
+    // MARK: - Initializers
+    
+    /**
+     Initialize {{ StructName }} with all parameters
+     */
+    init(
+{{#each Columns}}
+        {{ FieldName }}: {{ LangType }}{{#unless @last}},{{/unless}}{{#if ColumnComment}} // {{ ColumnComment }}{{/if}}
+{{/each}}
+    ) {
+{{#each Columns}}
+        self.{{ FieldName }} = {{ FieldName }}
+{{/each}}
+    }
+
+    /**
+     Create {{ StructName }} from dictionary
+     */
+    init(from dictionary: [String: Any]) throws {
+{{#each Columns}}
+        {{#if IsNullable}}
+        self.{{ FieldName }} = dictionary["{{ OriginalColumnName }}"] as? {{ LangType }}
+        {{else}}
+        guard let {{ FieldName }} = dictionary["{{ OriginalColumnName }}"] as? {{ LangType }} else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: [],
+                    debugDescription: "{{ OriginalColumnName }} is required"
+                )
+            )
+        }
+        self.{{ FieldName }} = {{ FieldName }}
+        {{/if}}
+{{/each}}
+    }
+
+    // MARK: - Methods
+
+    /**
+     Convert {{ StructName }} to dictionary
+     */
+    func toDictionary() -> [String: Any?] {
+        return [
+{{#each Columns}}
+            "{{ OriginalColumnName }}": {{ FieldName }}{{#unless @last}},{{/unless}}
+{{/each}}
+        ]
+    }
+
+    /**
+     Convert {{ StructName }} to JSON Data
+     */
+    func toJSON() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
+
+    /**
+     Create {{ StructName }} from JSON Data
+     */
+    static func fromJSON(_ data: Data) throws -> {{ StructName }} {
+        return try JSONDecoder().decode({{ StructName }}.self, from: data)
+    }
+}
