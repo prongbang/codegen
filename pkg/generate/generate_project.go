@@ -2,12 +2,13 @@ package generate
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/ettle/strcase"
 	"github.com/prongbang/fibergen/pkg/filex"
 	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/pkg/template"
+	"github.com/prongbang/fibergen/template"
 	"github.com/pterm/pterm"
-	"path/filepath"
 )
 
 type FileConfig struct {

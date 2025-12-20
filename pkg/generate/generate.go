@@ -2,6 +2,7 @@ package generate
 
 import (
 	"fmt"
+
 	"github.com/prongbang/fibergen/pkg/option"
 )
 

@@ -8,8 +8,8 @@ import (
 	"github.com/prongbang/fibergen/pkg/filex"
 	"github.com/prongbang/fibergen/pkg/mod"
 	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/pkg/template"
 	"github.com/prongbang/fibergen/pkg/tools"
+	"github.com/prongbang/fibergen/template"
 )
 
 func sharedTemplates(pkg option.Package) map[string][]byte {

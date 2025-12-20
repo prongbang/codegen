@@ -1,6 +1,8 @@
 package option
 
-import "github.com/prongbang/fibergen/pkg/template"
+import (
+	"github.com/prongbang/fibergen/template"
+)
 
 type Options struct {
 	Project string
