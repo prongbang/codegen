@@ -132,8 +132,15 @@ func (d *dataSource) FindOne(ctx context.Context, obj *One{{.ModelName}}Criteria
 
 func (d *dataSource) Create(ctx context.Context, obj *Create{{.ModelName}}Request) (*{{.ModelName}}, error) {
 	conn := d.Driver.{{.DriverName}}()
-
+{{- if eq .PrimaryField.Type "string" }}
+    if obj.Id == "" {
+        obj.Id = core.Uuid()
+    }
+{{- end }}
     valuesMap := sqlbuilder.Map{
+    {{- if eq .PrimaryField.Type "string" }}
+        "id": obj.Id,
+    {{- end }}
     {{- range $i, $f := .Fields }}
         {{- if not $f.PrimaryKey }}
         "{{$f.SnakeCase}}": obj.{{$f.PascalCase}},
@@ -144,23 +151,31 @@ func (d *dataSource) Create(ctx context.Context, obj *Create{{.ModelName}}Reques
 	queryBuilder := sqlbuilder.New()
 	queryBuilder.Insert("{{.TableName}}").ValuesMap(valuesMap)
 
+{{- if eq .PrimaryField.Type "int64" }}
 	result, err := conn.ExecContext(ctx, queryBuilder.ToSQL(), queryBuilder.Args()...)
+{{- else }}
+    _, err := conn.ExecContext(ctx, queryBuilder.ToSQL(), queryBuilder.Args()...)
+{{- end }}
 	if err != nil {
 		return nil, response.NewInsertError()
 	}
 
+{{- if eq .PrimaryField.Type "int64" }}
 	obj.Id, err = result.LastInsertId()
 	if err != nil {
 		return nil, response.NewLastInsertIdError(err)
 	}
-
-	return obj, nil
+{{- end }}
+	return pointer.New((*obj).To{{.ModelName}}()), nil
 }
 
 func (d *dataSource) CreateList(ctx context.Context, obj *[]Create{{.ModelName}}Request) (*[]{{.ModelName}}, error) {
 	conn := d.Driver.{{.DriverName}}()
 
 	columns := []string{
+{{- if eq .PrimaryField.Type "string" }}
+    "id",
+{{- end }}
 {{- range $i, $f := .Fields }}
     {{- if not $f.PrimaryKey }}
         "{{$f.SnakeCase}}",
@@ -169,7 +184,15 @@ func (d *dataSource) CreateList(ctx context.Context, obj *[]Create{{.ModelName}}
 	}
 	values := [][]interface{}{}
 	for _, v := range *obj {
+	    {{- if eq .PrimaryField.Type "string" }}
+        if v.Id == "" {
+            v.Id = core.Uuid()
+        }
+        {{- end }}
 		values = append(values, []interface{}{
+		{{- if eq .PrimaryField.Type "string" }}
+            v.Id,
+        {{- end }}
 		{{- range $i, $f := .Fields }}
 		    {{- if not $f.PrimaryKey }}
             v.{{$f.PascalCase}},
@@ -186,7 +209,7 @@ func (d *dataSource) CreateList(ctx context.Context, obj *[]Create{{.ModelName}}
 		return nil, response.NewInsertError()
 	}
 
-	return obj, nil
+	return pointer.New(collection.Map(*obj, Create{{.ModelName}}Request.To{{.ModelName}})), nil
 }
 
 func (d *dataSource) Update(ctx context.Context, obj *Update{{.ModelName}}Request) (*{{.ModelName}}, error) {
@@ -212,7 +235,7 @@ func (d *dataSource) Update(ctx context.Context, obj *Update{{.ModelName}}Reques
 		return nil, response.NewUpdateError()
 	}
 
-	return obj, nil
+	return pointer.New((*obj).To{{.ModelName}}()), nil
 }
 
 func (d *dataSource) UpdateList(ctx context.Context, obj *[]Update{{.ModelName}}Request) (*[]{{.ModelName}}, error) {
@@ -238,7 +261,7 @@ func (d *dataSource) UpdateList(ctx context.Context, obj *[]Update{{.ModelName}}
 		return nil, response.NewUpdateError()
 	}
 
-	return obj, nil
+	return pointer.New(collection.Map(*obj, Update{{.ModelName}}Request.To{{.ModelName}})), nil
 }
 
 func (d *dataSource) Delete(ctx context.Context, obj *Delete{{.ModelName}}Request) (*core.Empty, error) {

@@ -1,0 +1,9 @@
+package collection
+
+func Map[T any, R any](src []T, fn func(T) R) []R {
+	result := make([]R, 0, len(src))
+	for _, v := range src {
+		result = append(result, fn(v))
+	}
+	return result
+}

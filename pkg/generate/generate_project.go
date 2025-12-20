@@ -232,6 +232,10 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 			Template: template.StructXTemplate,
 		},
 		{
+			Path:     fmt.Sprintf("%s/pkg/collection/map.go", currentDir),
+			Template: template.CollectionMapTemplate,
+		},
+		{
 			Path:     fmt.Sprintf("%s/pkg/schema/sql.go", currentDir),
 			Template: template.SchemaSQLTemplate,
 		},

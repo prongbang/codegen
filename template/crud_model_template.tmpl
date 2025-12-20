@@ -45,6 +45,22 @@ type Create{{.ModelName}}Request struct {
 {{- end }}
 }
 
+func (m Create{{.ModelName}}Request) To{{.ModelName}}() {{.ModelName}} {
+    return {{.ModelName}}{
+    {{- range $field := $fields }}
+        {{- if $field.PrimaryKey }}
+        {{ $field.Name }}: m.{{ $field.Name }},
+        {{- else }}
+        {{- if contains $field.Type "*" }}
+        {{ $field.Name }}: &m.{{ $field.Name }},
+        {{- else }}
+        {{ $field.Name }}: &m.{{ $field.Name }},
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    }
+}
+
 type CreateList{{.ModelName}}Request struct {
 	UserRequestInfo *core.UserRequestInfo `json:"-"`
 	{{.ModelName}}s []Create{{.ModelName}}Request
@@ -59,6 +75,22 @@ type Update{{.ModelName}}Request struct {
 	{{ $field.Name }} *{{ $field.Type }} `json:"{{ $field.JsonTag }}" db:"{{ $field.DbTag }}"`
 	{{- end }}
 {{- end }}
+}
+
+func (m Update{{.ModelName}}Request) To{{.ModelName}}() {{.ModelName}} {
+    return {{.ModelName}}{
+    {{- range $field := $fields }}
+        {{- if $field.PrimaryKey }}
+        {{ $field.Name }}: m.{{ $field.Name }},
+        {{- else }}
+        {{- if contains $field.Type "*" }}
+        {{ $field.Name }}: m.{{ $field.Name }},
+        {{- else }}
+        {{ $field.Name }}: m.{{ $field.Name }},
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    }
 }
 
 type UpdateList{{.ModelName}}Request struct {

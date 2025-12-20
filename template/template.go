@@ -278,6 +278,9 @@ var SchemaSQLTemplate string
 //go:embed pkg_structx_template.tmpl
 var StructXTemplate string
 
+//go:embed pkg_collection_map_template.tmpl
+var CollectionMapTemplate string
+
 // Wire
 
 //go:embed wire_gen_template.tmpl
