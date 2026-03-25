@@ -2,23 +2,23 @@ package generate_test
 
 import (
 	"fmt"
-	"github.com/prongbang/fibergen/pkg/common"
-	"github.com/prongbang/fibergen/pkg/generate"
+	"github.com/prongbang/codegen/pkg/common"
+	"github.com/prongbang/codegen/pkg/generate"
 	"testing"
 
-	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/pkg/template"
-	"github.com/prongbang/fibergen/pkg/tools"
+	"github.com/prongbang/codegen/pkg/option"
+	"github.com/prongbang/codegen/pkg/tools"
+	"github.com/prongbang/codegen/template"
 
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/mod"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/mod"
 )
 
-var module string = "github.com/prongbang/fibergen"
+var module string = "github.com/prongbang/codegen"
 var appPath string = "internal/app"
-var pwd string = "/usr/go/src/github.com/prongbang/fibergen/internal/app/api"
-var pwdPath string = "/usr/go/src/github.com/prongbang/fibergen/internal/app/api"
-var rootPath string = "/usr/go/src/github.com/prongbang/fibergen"
+var pwd string = "/usr/go/src/github.com/prongbang/codegen/internal/app/api"
+var pwdPath string = "/usr/go/src/github.com/prongbang/codegen/internal/app/api"
+var rootPath string = "/usr/go/src/github.com/prongbang/codegen"
 var read string = ""
 
 type fileXMock struct {

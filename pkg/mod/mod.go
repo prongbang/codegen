@@ -1,6 +1,6 @@
 package mod
 
-import "github.com/prongbang/fibergen/pkg/config"
+import "github.com/prongbang/codegen/pkg/config"
 
 // Mod is struct
 type Mod struct {

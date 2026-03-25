@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/ettle/strcase"
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/template"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/option"
+	"github.com/prongbang/codegen/template"
 	"github.com/pterm/pterm"
 )
 

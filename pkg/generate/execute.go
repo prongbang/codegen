@@ -1,8 +1,8 @@
 package generate
 
 import (
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/template"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/template"
 )
 
 func WriteFile(fx filex.FileX, filename, tmpl string, data interface{}) error {

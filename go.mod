@@ -1,4 +1,4 @@
-module github.com/prongbang/fibergen
+module github.com/prongbang/codegen
 
 go 1.23.4
 

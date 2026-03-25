@@ -1,7 +1,7 @@
 package option
 
 import (
-	"github.com/prongbang/fibergen/template"
+	"github.com/prongbang/codegen/template"
 )
 
 type Options struct {

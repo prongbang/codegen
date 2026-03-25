@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prongbang/fibergen/pkg/arch"
+	"github.com/prongbang/codegen/pkg/arch"
 )
 
 func TestIsDarwinArm64(t *testing.T) {

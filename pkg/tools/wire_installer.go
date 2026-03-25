@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"github.com/prongbang/fibergen/pkg/command"
+	"github.com/prongbang/codegen/pkg/command"
 	"github.com/pterm/pterm"
 )
 

@@ -3,7 +3,7 @@ package generate
 import (
 	"fmt"
 
-	"github.com/prongbang/fibergen/pkg/option"
+	"github.com/prongbang/codegen/pkg/option"
 )
 
 // Generator is the interface

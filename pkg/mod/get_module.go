@@ -2,10 +2,10 @@ package mod
 
 import (
 	"fmt"
-	"github.com/prongbang/fibergen/pkg/config"
+	"github.com/prongbang/codegen/pkg/config"
 	"strings"
 
-	"github.com/prongbang/fibergen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/filex"
 )
 
 func GetModule(fx filex.FileX) Mod {

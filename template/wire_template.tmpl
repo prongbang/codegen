@@ -13,7 +13,7 @@ import (
 	"{{.Module}}/internal/pkg/validator"
 	"{{.Module}}/internal/middleware"
 	"{{.Module}}/pkg/requestx"
-	//+fibergen:import wire:package
+	//+codegen:import wire:package
 )
 
 func CreateApp(dbDriver database.Drivers) app.App {
@@ -28,7 +28,7 @@ func CreateApp(dbDriver database.Drivers) app.App {
 		requestx.NewRequestHandler,
 		middleware.NewOnRequestGuard,
 		example.ProviderSet,
-		//+fibergen:func wire:build
+		//+codegen:func wire:build
 	)
 	return nil
 }

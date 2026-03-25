@@ -2,9 +2,9 @@ package creator
 
 import (
 	"fmt"
-	"github.com/prongbang/fibergen/pkg/common"
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/option"
+	"github.com/prongbang/codegen/pkg/common"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/option"
 	"github.com/pterm/pterm"
 )
 

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prongbang/fibergen/pkg/creator"
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/generate"
+	"github.com/prongbang/codegen/pkg/creator"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/generate"
 
 	"github.com/ettle/strcase"
-	"github.com/prongbang/fibergen/pkg/arch"
-	"github.com/prongbang/fibergen/pkg/command"
-	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/pkg/tools"
+	"github.com/prongbang/codegen/pkg/arch"
+	"github.com/prongbang/codegen/pkg/command"
+	"github.com/prongbang/codegen/pkg/option"
+	"github.com/prongbang/codegen/pkg/tools"
 	"github.com/urfave/cli/v2"
 )
 
@@ -55,9 +55,9 @@ func main() {
 	flags := Flags{}
 
 	app := &cli.App{
-		Name:      "fibergen",
+		Name:      "codegen",
 		Usage:     "Generate a Clean Architecture for REST API with support for the Fiber Web Framework in Golang",
-		Version:   "v1.0.7",
+		Version:   "v1.4.5",
 		Compiled:  time.Now(),
 		Copyright: "(c) 2023 prongbang",
 		Authors: []*cli.Author{
@@ -141,6 +141,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		fmt.Println("[fibergen]", err.Error())
+		fmt.Println("[codegen]", err.Error())
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"github.com/ettle/strcase"
-	"github.com/prongbang/fibergen/pkg/common"
+	"github.com/prongbang/codegen/pkg/common"
 )
 
 // API

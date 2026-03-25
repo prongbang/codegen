@@ -1,7 +1,7 @@
 package option
 
 import (
-	"github.com/prongbang/fibergen/pkg/mod"
+	"github.com/prongbang/codegen/pkg/mod"
 )
 
 // Package is struct

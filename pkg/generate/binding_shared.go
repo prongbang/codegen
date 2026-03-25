@@ -2,10 +2,10 @@ package generate
 
 import (
 	"fmt"
-	"github.com/prongbang/fibergen/pkg/common"
-	"github.com/prongbang/fibergen/pkg/config"
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/option"
+	"github.com/prongbang/codegen/pkg/common"
+	"github.com/prongbang/codegen/pkg/config"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/option"
 	"github.com/pterm/pterm"
 	"strings"
 )
@@ -42,8 +42,8 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 
 	wireB := b.FileX.ReadFile(wirePath)
 	wireText := wireB
-	wireImpPat1 := "//+fibergen:import wire:package"
-	wireImpPat2 := "// +fibergen:import wire:package"
+	wireImpPat1 := "//+codegen:import wire:package"
+	wireImpPat2 := "// +codegen:import wire:package"
 	wireImp := fmt.Sprintf(
 		`shared%s "%s/%s/shared/%s"
 	%s`, common.ToLower(pkg.Name), pkg.Module.Module, appPath, common.ToLower(pkg.Name), wireImpPat1,
@@ -51,8 +51,8 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 	wireText = strings.Replace(wireText, wireImpPat1, wireImp, 1)
 	wireText = strings.Replace(wireText, wireImpPat2, wireImp, 1)
 
-	wireBuildPat1 := "//+fibergen:func wire:build"
-	wireBuildPat2 := "// +fibergen:func wire:build"
+	wireBuildPat1 := "//+codegen:func wire:build"
+	wireBuildPat2 := "// +codegen:func wire:build"
 	wireBuild := fmt.Sprintf(
 		`shared%s.ProviderSet,
 		%s`, common.ToLower(pkg.Name), wireBuildPat1,

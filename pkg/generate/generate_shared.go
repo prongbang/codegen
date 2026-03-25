@@ -3,13 +3,13 @@ package generate
 import (
 	"fmt"
 
-	"github.com/prongbang/fibergen/pkg/config"
-	"github.com/prongbang/fibergen/pkg/creator"
-	"github.com/prongbang/fibergen/pkg/filex"
-	"github.com/prongbang/fibergen/pkg/mod"
-	"github.com/prongbang/fibergen/pkg/option"
-	"github.com/prongbang/fibergen/pkg/tools"
-	"github.com/prongbang/fibergen/template"
+	"github.com/prongbang/codegen/pkg/config"
+	"github.com/prongbang/codegen/pkg/creator"
+	"github.com/prongbang/codegen/pkg/filex"
+	"github.com/prongbang/codegen/pkg/mod"
+	"github.com/prongbang/codegen/pkg/option"
+	"github.com/prongbang/codegen/pkg/tools"
+	"github.com/prongbang/codegen/template"
 )
 
 func sharedTemplates(pkg option.Package) map[string][]byte {

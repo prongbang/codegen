@@ -1,10 +1,10 @@
-# FiberGen 🚀
+# Codegen 🚀
 
-[![Codecov](https://img.shields.io/codecov/c/github/prongbang/fibergen.svg)](https://codecov.io/gh/prongbang/fibergen)
-[![Go Report Card](https://goreportcard.com/badge/github.com/prongbang/fibergen)](https://goreportcard.com/report/github.com/prongbang/fibergen)
-[![Go Reference](https://pkg.go.dev/badge/github.com/prongbang/fibergen.svg)](https://pkg.go.dev/github.com/prongbang/fibergen)
+[![Codecov](https://img.shields.io/codecov/c/github/prongbang/codegen.svg)](https://codecov.io/gh/prongbang/codegen)
+[![Go Report Card](https://goreportcard.com/badge/github.com/prongbang/codegen)](https://goreportcard.com/report/github.com/prongbang/codegen)
+[![Go Reference](https://pkg.go.dev/badge/github.com/prongbang/codegen.svg)](https://pkg.go.dev/github.com/prongbang/codegen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/github/v/release/prongbang/fibergen)](https://github.com/prongbang/fibergen/releases)
+[![Version](https://img.shields.io/github/v/release/prongbang/codegen)](https://github.com/prongbang/codegen/releases)
 
 > Generate Clean Architecture for REST API with support for Fiber Web Framework and gRPC in Golang. Speed up your development with automatic code generation.
 
@@ -24,12 +24,7 @@
 
 Latest version:
 ```shell
-go install github.com/prongbang/fibergen@v1.4.3
-```
-
-For older projects:
-```shell
-go install github.com/prongbang/fibergen@v1.2.5
+go install github.com/prongbang/codegen@v1.4.5
 ```
 
 ## 🚀 Quick Start
@@ -39,7 +34,7 @@ go install github.com/prongbang/fibergen@v1.2.5
 Generate a new project with module structure:
 
 ```shell
-fibergen -new test_project -mod github.com/prongbang
+codegen -new test_project -mod github.com/prongbang
 ```
 
 Parameters:
@@ -148,7 +143,7 @@ This creates the following structure:
 Generate a new feature module:
 
 ```shell
-fibergen -f user
+codegen -f user
 ```
 
 This creates:
@@ -184,13 +179,13 @@ Create `spec/auth.json`:
 - SQL Builder
 
 ```shell
-fibergen -f auth -s spec/auth.json -d mariadb -orm sqlbuilder
+codegen -f auth -s spec/auth.json -d mariadb -orm sqlbuilder
 ```
 
 - Bun
 
 ```shell
-fibergen -f auth -s spec/auth.json -d mariadb -orm bun
+codegen -f auth -s spec/auth.json -d mariadb -orm bun
 ```
 
 This generates complete CRUD operations based on your JSON structure.
@@ -210,7 +205,7 @@ test-project/internal/app/api/promotion
 ### 4. Generate Shared Prototype
 
 ```shell
-fibergen -sh promotion
+codegen -sh promotion
 ```
 This generates shared prototype
 
@@ -227,13 +222,13 @@ test-project/internal/shared/promotion
 - SQL Builder
 
 ```shell
-fibergen -sh promotion -s spec/promotion.json -d maridb -orm sqlbuilder
+codegen -sh promotion -s spec/promotion.json -d maridb -orm sqlbuilder
 ```
 
 - Bun
 
 ```shell
-fibergen -sh promotion -s spec/promotion.json -d maridb -orm bun
+codegen -sh promotion -s spec/promotion.json -d maridb -orm bun
 ```
 
 This generates shared CRUD operations based on your JSON structure.

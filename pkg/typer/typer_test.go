@@ -2,7 +2,7 @@ package typer_test
 
 import (
 	"fmt"
-	"github.com/prongbang/fibergen/pkg/typer"
+	"github.com/prongbang/codegen/pkg/typer"
 	"testing"
 )
 
