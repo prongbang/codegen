@@ -1,0 +1,48 @@
+package grpc
+
+import (
+	"fmt"
+	"log"
+	"net"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
+
+type GRPC interface {
+	Register() *grpc.Server
+}
+
+type gRPC struct {
+	Servers Servers
+}
+
+func (g *gRPC) Register() *grpc.Server {
+	// Set up a connection tcp server
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50051))
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+
+	// Servers
+	g.Servers.Initials(s)
+
+	// Register reflection service on gRPC server, using on develop only.
+	reflection.Register(s)
+
+	go func() {
+		log.Printf("gRPC Server listening at %v", lis.Addr())
+		if err = s.Serve(lis); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
+
+	return s
+}
+
+func New(servers Servers) GRPC {
+	return &gRPC{
+		Servers: servers,
+	}
+}

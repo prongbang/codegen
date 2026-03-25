@@ -66,6 +66,27 @@ func main() {
 				Email: "github.com/prongbang",
 			},
 		},
+		Commands: []*cli.Command{
+			{
+				Name:  "grpc",
+				Usage: "gRPC utilities",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "init",
+						Usage: "Initialize gRPC scaffold under internal/app/grpc",
+						Action: func(*cli.Context) error {
+							cmd := command.New()
+							fileX := filex.NewFileX()
+							grpcInstaller := tools.NewGRPCInstaller(cmd)
+							wireInstaller := tools.NewWireInstaller(cmd)
+							wireRunner := tools.NewWireRunner(cmd)
+							grpcGenerator := generate.NewGRPCGenerator(fileX, cmd, grpcInstaller, wireInstaller, wireRunner)
+							return grpcGenerator.Init()
+						},
+					},
+				},
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "new",

@@ -2,6 +2,7 @@ package app
 
 import (
 	"{{.Module}}/internal/app/api"
+	//+codegen:import app:package
 )
 
 type App interface {
@@ -10,14 +11,20 @@ type App interface {
 
 type app struct {
 	API  api.API
+	//+codegen:struct app
 }
 
 func (a *app) StartAPI() {
+	//+codegen:func app:start
 	a.API.Register()
 }
 
-func NewApp(apis api.API) App {
+func NewApp(
+	apis api.API,
+	//+codegen:func app:new
+) App {
 	return &app{
-		API:  apis,
+		API: apis,
+		//+codegen:func app:return
 	}
 }

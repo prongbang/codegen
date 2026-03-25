@@ -1,0 +1,17 @@
+package healthv1
+
+import (
+	"context"
+)
+
+type healthServiceServer struct {
+}
+
+// Check implements HealthServiceServer.
+func (h *healthServiceServer) Check(context.Context, *Request) (*Response, error) {
+	return &Response{Status: "UP"}, nil
+}
+
+func NewServer() HealthServiceServer {
+	return &healthServiceServer{}
+}

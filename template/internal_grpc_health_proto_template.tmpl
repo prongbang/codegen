@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "{{.Module}}/internal/app/grpc/health/v1;healthv1";
+
+package health.v1;
+
+message Request {}
+
+message Response {
+    string status = 1;
+}
+
+service HealthService {
+    rpc Check (Request) returns (Response);
+}

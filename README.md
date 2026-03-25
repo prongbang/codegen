@@ -138,6 +138,12 @@ This creates the following structure:
 └── wire_gen.go
 ```
 
+### 1.1 Initial gRPC
+
+```sh
+codegen grpc init
+```
+
 ### 2. Generate Features Prototype
 
 Generate a new feature module:

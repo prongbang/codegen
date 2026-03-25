@@ -201,6 +201,26 @@ var InternalMiddlewareApiKeyTemplate string
 //go:embed internal_middleware_on_request_template.tmpl
 var InternalMiddlewareOnRequestTemplate string
 
+// Internal gRPC
+
+//go:embed internal_grpc_template.tmpl
+var InternalGRPCTemplate string
+
+//go:embed internal_grpc_servers_template.tmpl
+var InternalGRPCServersTemplate string
+
+//go:embed internal_grpc_health_proto_template.tmpl
+var InternalGRPCHealthProtoTemplate string
+
+//go:embed internal_grpc_health_provider_template.tmpl
+var InternalGRPCHealthProviderTemplate string
+
+//go:embed internal_grpc_health_server_template.tmpl
+var InternalGRPCHealthServerTemplate string
+
+//go:embed internal_grpc_makefile_template.tmpl
+var InternalGRPCMakefileTemplate string
+
 // Makefile
 
 //go:embed makefile_template.tmpl
