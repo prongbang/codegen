@@ -1,6 +1,9 @@
 package typer
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestGet(t *testing.T) {
 	tests := []struct {
@@ -12,6 +15,8 @@ func TestGet(t *testing.T) {
 		{name: "string", value: "Alice", want: "string"},
 		{name: "time", value: "2024-10-15T14:30:00Z", want: "*time.Time"},
 		{name: "int", value: 30, want: "int64"},
+		{name: "json-number-int", value: json.Number("42"), want: "int64"},
+		{name: "json-number-float", value: json.Number("5.7"), want: "float64"},
 		{name: "bool", value: true, want: "*bool"},
 		{name: "float", value: 5.7, want: "float64"},
 		{name: "fallback", value: []string{"x"}, want: "any"},

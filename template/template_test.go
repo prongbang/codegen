@@ -50,3 +50,15 @@ func TestRenderTextSupportsTemplateFuncs(t *testing.T) {
 		t.Fatalf("unexpected helper output: %s", string(buf))
 	}
 }
+
+func TestRenderTextSupportsHasField(t *testing.T) {
+	buf, err := RenderText(`{{hasField .Fields "CreatedBy"}}|{{hasField .Fields "UpdatedBy"}}`, Project{
+		Fields: []Field{{Name: "CreatedBy"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(buf)); got != "true|false" {
+		t.Fatalf("unexpected hasField output: %s", got)
+	}
+}

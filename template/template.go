@@ -337,6 +337,14 @@ func RenderText[T any](tmpl string, data T) ([]byte, error) {
 	funcs := template.FuncMap{
 		"split":    strings.Split,
 		"contains": strings.Contains,
+		"hasField": func(fields []Field, name string) bool {
+			for _, field := range fields {
+				if field.Name == name {
+					return true
+				}
+			}
+			return false
+		},
 		"sub": func(a, b int) int {
 			return a - b
 		},

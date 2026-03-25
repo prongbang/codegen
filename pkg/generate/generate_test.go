@@ -264,6 +264,58 @@ func TestGenerateSpecRejectsInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestGenerateSpecPreservesIntAndFloatNumbers(t *testing.T) {
+	fx := &readFileX{
+		content: map[string]string{
+			"spec.json": `{"id":1,"count":2,"price":10.5}`,
+		},
+	}
+
+	spec, err := generateSpec(fx, option.Options{
+		Feature: "invoice",
+		Spec:    "spec.json",
+		Driver:  "mariadb",
+		Orm:     "bun",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotTypes := map[string]string{}
+	for _, field := range spec.Fields {
+		gotTypes[field.Name] = field.Type
+	}
+
+	if gotTypes["Id"] != "int64" {
+		t.Fatalf("unexpected Id type: %s", gotTypes["Id"])
+	}
+	if gotTypes["Count"] != "int64" {
+		t.Fatalf("unexpected Count type: %s", gotTypes["Count"])
+	}
+	if gotTypes["Price"] != "float64" {
+		t.Fatalf("unexpected Price type: %s", gotTypes["Price"])
+	}
+}
+
+func TestCrudUseCaseBunTemplateSkipsAuditAssignmentsWhenFieldsMissing(t *testing.T) {
+	buf := mustRender(t, template.CrudUseCaseBunTemplate, template.Project{
+		Name:   "auth",
+		Module: "github.com/acme/demo",
+		Fields: []template.Field{
+			{Name: "Id", Type: "int64", Update: true},
+			{Name: "AccessToken", Type: "string", Update: true},
+		},
+	})
+
+	got := string(buf)
+	if strings.Contains(got, "CreatedBy: obj.UserRequestInfo.Id") {
+		t.Fatalf("unexpected create audit assignment:\n%s", got)
+	}
+	if strings.Contains(got, "UpdatedBy: obj.UserRequestInfo.Id") || strings.Contains(got, "data.UpdatedBy = obj.UserRequestInfo.Id") {
+		t.Fatalf("unexpected update audit assignment:\n%s", got)
+	}
+}
+
 func TestFeatureAndSharedTemplates(t *testing.T) {
 	pkg := option.Package{
 		Name: "device",

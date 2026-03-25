@@ -66,7 +66,7 @@ func TestWireRunnerRunsWire(t *testing.T) {
 	if err := NewWireRunner(cmd).Run(); err != nil {
 		t.Fatal(err)
 	}
-	if len(cmd.runCalls) != 1 || cmd.runCalls[0] != "wire" {
+	if len(cmd.runCalls) != 2 || cmd.runCalls[0] != "go mod tidy" || cmd.runCalls[1] != "wire" {
 		t.Fatalf("unexpected run calls: %+v", cmd.runCalls)
 	}
 }

@@ -11,13 +11,21 @@ type wireRunner struct {
 
 // Run implements Runner.
 func (r *wireRunner) Run() error {
+	spinnerTidy, _ := pterm.DefaultSpinner.Start("Go mod tidy")
+	_, err := r.Cmd.Run("go", "mod", "tidy")
+	if err != nil {
+		spinnerTidy.Fail()
+		return err
+	}
+	spinnerTidy.Success()
+
 	spinnerWire, _ := pterm.DefaultSpinner.Start("Wire: Automated Initialization")
-	_, err := r.Cmd.Run("wire")
+	_, err = r.Cmd.Run("wire")
 	if err != nil {
 		spinnerWire.Fail()
-	} else {
-		spinnerWire.Success()
+		return err
 	}
+	spinnerWire.Success()
 	return err
 }
 

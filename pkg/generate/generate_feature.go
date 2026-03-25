@@ -1,6 +1,7 @@
 package generate
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -132,7 +133,9 @@ func generateSpec(fileX filex.FileX, opt option.Options) (option.Spec, error) {
 	// Load spec from JSON file
 	jsonSpec := fileX.ReadFile(opt.Spec)
 	var result map[string]interface{}
-	err := json.Unmarshal([]byte(jsonSpec), &result)
+	decoder := json.NewDecoder(bytes.NewBufferString(jsonSpec))
+	decoder.UseNumber()
+	err := decoder.Decode(&result)
 	if err != nil {
 		return option.Spec{}, fmt.Errorf("JSON format invalid: %s", err.Error())
 	}

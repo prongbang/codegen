@@ -62,7 +62,9 @@ func (uc *useCase) Create(ctx context.Context, obj *Create{{.ModelName}}Request)
         {{ $field.Name }}: obj.{{ $field.Name }},
     {{- end }}
     {{- end }}
+    {{- if hasField $fields "CreatedBy" }}
         CreatedBy: obj.UserRequestInfo.Id,
+    {{- end }}
     }
 
 	_, err := uc.Repo.Create(ctx, data)
@@ -81,7 +83,9 @@ func (uc *useCase) CreateList(ctx context.Context, obj *CreateList{{.ModelName}}
             {{ $field.Name }}: record.{{ $field.Name }},
         {{- end }}
         {{- end }}
+        {{- if hasField $fields "CreatedBy" }}
             CreatedBy: obj.UserRequestInfo.Id,
+        {{- end }}
         })
     }
 
@@ -106,7 +110,9 @@ func (uc *useCase) Update(ctx context.Context, obj *Update{{.ModelName}}Request)
     data.{{ $field.Name }} = obj.{{ $field.Name }}
 {{- end }}
 {{- end }}
+{{- if hasField $fields "UpdatedBy" }}
 	data.UpdatedBy = obj.UserRequestInfo.Id
+{{- end }}
 
 	_, err = uc.Repo.Update(ctx, data)
 	if err != nil {
@@ -125,7 +131,9 @@ func (uc *useCase) UpdateList(ctx context.Context, obj *UpdateList{{.ModelName}}
             {{ $field.Name }}: record.{{ $field.Name }},
         {{- end }}
         {{- end }}
+        {{- if hasField $fields "UpdatedBy" }}
             UpdatedBy: obj.UserRequestInfo.Id,
+        {{- end }}
         })
     }
 

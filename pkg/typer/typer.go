@@ -1,6 +1,7 @@
 package typer
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -13,6 +14,14 @@ func Get(value any) string {
 	}
 
 	switch v := value.(type) {
+	case json.Number:
+		if _, err := v.Int64(); err == nil {
+			return "int64"
+		}
+		if _, err := v.Float64(); err == nil {
+			return "float64"
+		}
+		return "any"
 	case string:
 		t, err := time.Parse("2006-01-02T15:04:05Z", v)
 		if err == nil && t.Day() > 0 {
