@@ -1,6 +1,6 @@
 # Codegen 🚀
 
-[![Codecov](https://img.shields.io/codecov/c/github/prongbang/codegen.svg)](https://codecov.io/gh/prongbang/codegen)
+[![Coverage](https://codecov.io/gh/prongbang/codegen/graph/badge.svg)](https://codecov.io/gh/prongbang/codegen)
 [![Go Report Card](https://goreportcard.com/badge/github.com/prongbang/codegen)](https://goreportcard.com/report/github.com/prongbang/codegen)
 [![Go Reference](https://pkg.go.dev/badge/github.com/prongbang/codegen.svg)](https://pkg.go.dev/github.com/prongbang/codegen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

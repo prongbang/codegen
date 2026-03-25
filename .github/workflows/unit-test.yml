@@ -1,0 +1,92 @@
+name: Unit Test
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    name: Unit test and coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run unit tests
+        id: unit_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./... -covermode=atomic -coverprofile=coverage.out | tee test.log
+          go tool cover -func=coverage.out | tee coverage.txt
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.txt
+            test.log
+          if-no-files-found: error
+
+      - name: Upload coverage to Codecov
+        if: always() && hashFiles('coverage.out') != ''
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          files: ./coverage.out
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Coverage summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Unit Test Coverage"
+            echo
+
+            if [[ -f coverage.txt ]]; then
+              total_coverage="$(awk '/^total:/ {print $3}' coverage.txt)"
+              echo "- Total coverage: **${total_coverage:-unknown}**"
+            else
+              echo "- Total coverage: **unavailable**"
+            fi
+
+            if [[ -f test.log ]]; then
+              echo "- Test status: **${{ steps.unit_tests.outcome }}**"
+              echo
+              echo "### Package Coverage"
+              echo
+              echo "| Package | Coverage |"
+              echo "| --- | --- |"
+              awk '
+                $1 == "ok" && index($0, "coverage:") > 0 {
+                  pkg = $2
+                  coverage = substr($0, index($0, "coverage:") + length("coverage: "))
+                  printf("| `%s` | %s |\n", pkg, coverage)
+                }
+              ' test.log
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if tests failed
+        if: steps.unit_tests.outcome != 'success'
+        shell: bash
+        run: exit 1
