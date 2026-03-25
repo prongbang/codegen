@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -218,6 +219,15 @@ var InternalGRPCHealthProviderTemplate string
 //go:embed internal_grpc_health_server_template.tmpl
 var InternalGRPCHealthServerTemplate string
 
+//go:embed internal_grpc_proto_template.tmpl
+var InternalGRPCProtoTemplate string
+
+//go:embed internal_grpc_provider_template.tmpl
+var InternalGRPCProviderTemplate string
+
+//go:embed internal_grpc_server_template.tmpl
+var InternalGRPCServerTemplate string
+
 //go:embed internal_grpc_makefile_template.tmpl
 var InternalGRPCMakefileTemplate string
 
@@ -397,4 +407,12 @@ func (w Project) TagsName() string {
 
 func (w Project) TableName() string {
 	return strcase.ToSnake(w.Name)
+}
+
+func (w Project) GRPCPackageName() string {
+	return strcase.ToSnake(w.Name)
+}
+
+func (w Project) GRPCVersionPackageName() string {
+	return fmt.Sprintf("%sv1", w.GRPCPackageName())
 }

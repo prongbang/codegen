@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "{{.Module}}/internal/app/grpc/{{.GRPCPackageName}}/v1;{{.GRPCVersionPackageName}}";
+
+package {{.GRPCPackageName}}.v1;
+
+message Request {}
+
+message Response {
+}
+
+service {{.ProjectName}}Service {
+}

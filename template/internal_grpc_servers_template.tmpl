@@ -3,6 +3,7 @@ package grpc
 import (
 	"google.golang.org/grpc"
 	healthv1 "{{.Module}}/internal/app/grpc/health/v1"
+	//+codegen:import grpc:package
 )
 
 type Servers interface {
@@ -11,16 +12,20 @@ type Servers interface {
 
 type servers struct {
 	healthServiceServer healthv1.HealthServiceServer
+	//+codegen:struct grpc
 }
 
 func (s *servers) Initials(svr *grpc.Server) {
 	healthv1.RegisterHealthServiceServer(svr, s.healthServiceServer)
+	//+codegen:func grpc:initials
 }
 
 func NewServers(
 	healthServiceServer healthv1.HealthServiceServer,
+	//+codegen:func grpc:new
 ) Servers {
 	return &servers{
 		healthServiceServer: healthServiceServer,
+		//+codegen:return grpc
 	}
 }

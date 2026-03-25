@@ -70,6 +70,25 @@ func main() {
 			{
 				Name:  "grpc",
 				Usage: "gRPC utilities",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "new",
+						Usage: "Generate gRPC package scaffold, e.g. --new user",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					name := c.String("new")
+					if name == "" {
+						return cli.ShowSubcommandHelp(c)
+					}
+					cmd := command.New()
+					fileX := filex.NewFileX()
+					grpcInstaller := tools.NewGRPCInstaller(cmd)
+					wireInstaller := tools.NewWireInstaller(cmd)
+					wireRunner := tools.NewWireRunner(cmd)
+					grpcGenerator := generate.NewGRPCGenerator(fileX, cmd, grpcInstaller, wireInstaller, wireRunner)
+					return grpcGenerator.New(name)
+				},
 				Subcommands: []*cli.Command{
 					{
 						Name:  "init",
