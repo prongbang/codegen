@@ -35,6 +35,10 @@ func TestProjectHelpers(t *testing.T) {
 	if p.GRPCPackageName() != "hello_world" || p.GRPCVersionPackageName() != "hello_worldv1" {
 		t.Fatalf("unexpected grpc package names: %s %s", p.GRPCPackageName(), p.GRPCVersionPackageName())
 	}
+	p.ThirdParty = "Core Service"
+	if p.ThirdPartyName() != "core_service" {
+		t.Fatalf("unexpected thirdparty name: %s", p.ThirdPartyName())
+	}
 }
 
 func TestRenderTextSupportsTemplateFuncs(t *testing.T) {

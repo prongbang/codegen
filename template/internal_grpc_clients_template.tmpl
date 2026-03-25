@@ -1,0 +1,32 @@
+package {{.ThirdPartyName}}
+
+import (
+	"google.golang.org/grpc"
+	//+codegen:import client:package
+)
+
+type Clients struct {
+	//+codegen:struct client
+	conns []*grpc.ClientConn
+}
+
+func (c *Clients) Close() {
+	for _, c := range c.conns {
+		_ = c.Close()
+	}
+}
+
+func NewClients() *Clients {
+	var conns []*grpc.ClientConn
+
+	// New connection
+	//+codegen:func client:new
+
+	// Temp conection
+	//+codegen:func client:append
+
+	return &Clients{
+		//+codegen:return client
+		conns: conns,
+	}
+}

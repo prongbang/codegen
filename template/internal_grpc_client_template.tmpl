@@ -1,0 +1,14 @@
+package {{.GRPCVersionPackageName}}
+
+import (
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func NewClient() (*grpc.ClientConn, {{.ProjectName}}ServiceClient) {
+	conn, _ := grpc.NewClient(
+		"localhost:50051",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	return conn, New{{.ProjectName}}ServiceClient(conn)
+}

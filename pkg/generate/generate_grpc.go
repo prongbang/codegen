@@ -16,6 +16,7 @@ import (
 type GRPCGenerator interface {
 	Init() error
 	New(name string) error
+	NewClient(name string) error
 }
 
 type grpcGenerator struct {
@@ -79,6 +80,35 @@ func getGRPCServiceConfig(rootDir, module, name string) []FileConfig {
 		{
 			Path:     filepath.Join(serviceDir, "server.go"),
 			Template: template.InternalGRPCServerTemplate,
+			Data:     data,
+		},
+	}
+}
+
+func getGRPCClientConfig(rootDir, module, thirdparty, name string) []FileConfig {
+	thirdPartyRoot := filepath.Join(rootDir, "internal", "thirdparty")
+	data := template.Project{Module: module, ThirdParty: thirdparty, Name: name}
+	thirdPartyDir := filepath.Join(thirdPartyRoot, data.ThirdPartyName())
+	serviceDir := filepath.Join(thirdPartyDir, data.GRPCPackageName(), "v1")
+
+	return []FileConfig{
+		{
+			Path:     filepath.Join(thirdPartyRoot, "Makefile"),
+			Template: template.InternalGRPCClientMakefileTemplate,
+		},
+		{
+			Path:     filepath.Join(thirdPartyDir, "clients.go"),
+			Template: template.InternalGRPCClientsTemplate,
+			Data:     data,
+		},
+		{
+			Path:     filepath.Join(serviceDir, "client.go"),
+			Template: template.InternalGRPCClientTemplate,
+			Data:     data,
+		},
+		{
+			Path:     filepath.Join(serviceDir, fmt.Sprintf("%s.proto", data.GRPCPackageName())),
+			Template: template.InternalGRPCClientProtoTemplate,
 			Data:     data,
 		},
 	}
@@ -179,6 +209,10 @@ func (g *grpcGenerator) New(name string) error {
 		return err
 	}
 
+	if err := bindGRPCMakefile(g.FileX, rootDir, serviceName); err != nil {
+		return err
+	}
+
 	if err := g.generateProto(rootDir, serviceName); err != nil {
 		return err
 	}
@@ -188,6 +222,64 @@ func (g *grpcGenerator) New(name string) error {
 	}
 
 	pterm.Success.Println("Generate gRPC package", serviceName)
+	return nil
+}
+
+func (g *grpcGenerator) NewClient(name string) error {
+	currentDir, err := g.FileX.Getwd()
+	if err != nil {
+		return err
+	}
+
+	rootDir, module, err := getGRPCProjectContext(g.FileX)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = g.FileX.Chdir(currentDir)
+	}()
+
+	thirdpartyName, serviceName, err := parseGRPCClientName(name)
+	if err != nil {
+		return err
+	}
+
+	if err := g.Installer.Install(); err != nil {
+		return err
+	}
+
+	for _, config := range getGRPCClientConfig(rootDir, module, thirdpartyName, serviceName) {
+		dir := filepath.Dir(config.Path)
+		if err := g.FileX.EnsureDir(dir); err != nil {
+			return err
+		}
+
+		if config.Data == nil {
+			config.Data = template.Any{}
+		}
+
+		if shouldSkipExistingGRPCClientFile(g.FileX, config.Path) {
+			continue
+		}
+
+		if err := WriteFile(g.FileX, config.Path, config.Template, config.Data); err != nil {
+			return err
+		}
+	}
+
+	if err := bindGRPCClients(g.FileX, rootDir, module, thirdpartyName, serviceName); err != nil {
+		return err
+	}
+
+	if err := bindGRPCThirdPartyMakefile(g.FileX, rootDir, thirdpartyName, serviceName); err != nil {
+		return err
+	}
+
+	if err := g.generateClientProto(rootDir, thirdpartyName, serviceName); err != nil {
+		return err
+	}
+
+	pterm.Success.Println("Generate gRPC client", thirdpartyName+"/"+serviceName)
 	return nil
 }
 
@@ -202,6 +294,16 @@ func (g *grpcGenerator) generateProto(rootDir, service string) error {
 	}
 
 	_, err := g.Cmd.RunAsync("make", "gen", fmt.Sprintf("service=%s", service), "version=v1")
+	return err
+}
+
+func (g *grpcGenerator) generateClientProto(rootDir, thirdparty, service string) error {
+	thirdPartyDir := filepath.Join(rootDir, "internal", "thirdparty")
+	if err := g.FileX.Chdir(thirdPartyDir); err != nil {
+		return err
+	}
+
+	_, err := g.Cmd.RunAsync("make", "gen", fmt.Sprintf("service=%s", service), "version=v1", fmt.Sprintf("thirdparty=%s", thirdparty))
 	return err
 }
 
@@ -430,6 +532,90 @@ func bindGRPCServiceWire(fx filex.FileX, rootDir, module, name string) error {
 	return fx.WriteFile(wirePath, []byte(wireText))
 }
 
+func bindGRPCMakefile(fx filex.FileX, rootDir, name string) error {
+	makefilePath := filepath.Join(rootDir, "internal", "app", "grpc", "Makefile")
+	if !fx.IsExist(makefilePath) {
+		return nil
+	}
+
+	targetName := fmt.Sprintf("gen_%s:", normalizeGRPCName(name))
+	makeCmd := fmt.Sprintf("\tmake gen service=%s version=v1", normalizeGRPCName(name))
+
+	makefileText := normalizeGRPCThirdPartyMakefileText(fx.ReadFile(makefilePath))
+	if !strings.Contains(makefileText, targetName) {
+		makefileText = replaceFirstMarker(makefileText, thirdPartyGenMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n%s\n\n%s", targetName, makeCmd, marker)
+		})
+	}
+
+	return fx.WriteFile(makefilePath, []byte(makefileText))
+}
+
+func bindGRPCClients(fx filex.FileX, rootDir, module, thirdparty, name string) error {
+	clientsPath := filepath.Join(rootDir, "internal", "thirdparty", normalizeGRPCName(thirdparty), "clients.go")
+	if !fx.IsExist(clientsPath) {
+		return fmt.Errorf("grpc clients.go not found, run `codegen grpc client --new %s/%s` first", normalizeGRPCName(thirdparty), normalizeGRPCName(name))
+	}
+
+	serviceName := strcase.ToPascal(normalizeGRPCName(name))
+	serviceAlias := grpcServiceAlias(name)
+	serviceImport := fmt.Sprintf("%s %q", serviceAlias, module+"/internal/thirdparty/"+normalizeGRPCName(thirdparty)+"/"+normalizeGRPCName(name)+"/v1")
+	serviceField := fmt.Sprintf("%sClient %s.%sServiceClient", serviceName, serviceAlias, serviceName)
+	serviceVar := strcase.ToCamel(normalizeGRPCName(name))
+	serviceConn := fmt.Sprintf("%sCon", serviceVar)
+	serviceNew := fmt.Sprintf("%s, %sClient := %s.NewClient()", serviceConn, serviceVar, serviceAlias)
+	serviceAppend := fmt.Sprintf("conns = append(conns, %s)", serviceConn)
+	serviceReturn := fmt.Sprintf("%sClient: %sClient,", serviceName, serviceVar)
+
+	clientsText := normalizeGRPCClientsText(fx.ReadFile(clientsPath))
+	if !strings.Contains(clientsText, serviceImport) {
+		clientsText = replaceFirstMarker(clientsText, clientImportMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n\t%s", serviceImport, marker)
+		})
+	}
+	if !strings.Contains(clientsText, serviceField) {
+		clientsText = replaceFirstMarker(clientsText, clientStructMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n\t%s", serviceField, marker)
+		})
+	}
+	if !strings.Contains(clientsText, serviceNew) {
+		clientsText = replaceFirstMarker(clientsText, clientNewMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n\t%s", serviceNew, marker)
+		})
+	}
+	if !strings.Contains(clientsText, serviceAppend) {
+		clientsText = replaceFirstMarker(clientsText, clientAppendMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n\t%s", serviceAppend, marker)
+		})
+	}
+	if !strings.Contains(clientsText, serviceReturn) {
+		clientsText = replaceFirstMarker(clientsText, clientReturnMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n\t\t%s", serviceReturn, marker)
+		})
+	}
+
+	return fx.WriteFile(clientsPath, []byte(clientsText))
+}
+
+func bindGRPCThirdPartyMakefile(fx filex.FileX, rootDir, thirdparty, name string) error {
+	makefilePath := filepath.Join(rootDir, "internal", "thirdparty", "Makefile")
+	if !fx.IsExist(makefilePath) {
+		return fmt.Errorf("thirdparty Makefile not found, run `codegen grpc client --new %s/%s` first", normalizeGRPCName(thirdparty), normalizeGRPCName(name))
+	}
+
+	targetName := fmt.Sprintf("gen_%s_%s:", normalizeGRPCName(thirdparty), normalizeGRPCName(name))
+	makeCmd := fmt.Sprintf("\tmake gen service=%s version=v1 thirdparty=%s", normalizeGRPCName(name), normalizeGRPCName(thirdparty))
+
+	makefileText := normalizeGRPCThirdPartyMakefileText(fx.ReadFile(makefilePath))
+	if !strings.Contains(makefileText, targetName) {
+		makefileText = replaceFirstMarker(makefileText, thirdPartyGenMarkers(), func(marker string) string {
+			return fmt.Sprintf("%s\n%s\n\n%s", targetName, makeCmd, marker)
+		})
+	}
+
+	return fx.WriteFile(makefilePath, []byte(makefileText))
+}
+
 func replaceFirstMarker(text string, markers []string, replacement func(marker string) string) string {
 	for _, marker := range markers {
 		if strings.Contains(text, marker) {
@@ -457,6 +643,36 @@ func normalizeGRPCServersText(text string) string {
 	text = normalizeSectionMarker(text, "func NewServers(\n", "\n) Servers {", grpcNewMarkers()[0], true)
 	text = normalizeSectionMarker(text, "return &servers{\n", "\n\t}\n}", grpcReturnMarkers()[0], true)
 	return text
+}
+
+func normalizeGRPCClientsText(text string) string {
+	text = normalizeSectionMarker(text, "import (\n", "\n)\n\ntype Clients struct {", clientImportMarkers()[0], false)
+	text = normalizeSectionMarker(text, "type Clients struct {\n", "\n\tconns []*grpc.ClientConn\n}\n\nfunc (c *Clients) Close() {", clientStructMarkers()[0], false)
+	text = normalizeSectionMarker(text, "\t// New connection\n", "\n\n\t// Temp conection\n", clientNewMarkers()[0], false)
+	text = normalizeSectionMarker(text, "\t// Temp conection\n", "\n\n\treturn &Clients{\n", clientAppendMarkers()[0], false)
+	text = normalizeSectionMarker(text, "\treturn &Clients{\n", "\n\t\tconns: conns,\n\t}\n}", clientReturnMarkers()[0], true)
+	return text
+}
+
+func normalizeGRPCThirdPartyMakefileText(text string) string {
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if isMarkerLine(strings.TrimSpace(line)) {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+
+	for len(filtered) > 0 && strings.TrimSpace(filtered[len(filtered)-1]) == "" {
+		filtered = filtered[:len(filtered)-1]
+	}
+
+	if len(filtered) == 0 {
+		return thirdPartyGenMarkers()[0]
+	}
+
+	return strings.Join(filtered, "\n") + "\n\n" + thirdPartyGenMarkers()[0]
 }
 
 func normalizeSectionMarker(text, start, end, marker string, ensureTrailingComma bool) string {
@@ -504,7 +720,18 @@ func normalizeSectionMarker(text, start, end, marker string, ensureTrailingComma
 }
 
 func isMarkerLine(line string) bool {
-	for _, marker := range append(append(append(append([]string{}, grpcImportMarkers()...), grpcStructMarkers()...), grpcInitialsMarkers()...), append(grpcNewMarkers(), grpcReturnMarkers()...)...) {
+	markers := append([]string{}, grpcImportMarkers()...)
+	markers = append(markers, grpcStructMarkers()...)
+	markers = append(markers, grpcInitialsMarkers()...)
+	markers = append(markers, grpcNewMarkers()...)
+	markers = append(markers, grpcReturnMarkers()...)
+	markers = append(markers, clientImportMarkers()...)
+	markers = append(markers, clientStructMarkers()...)
+	markers = append(markers, clientNewMarkers()...)
+	markers = append(markers, clientAppendMarkers()...)
+	markers = append(markers, clientReturnMarkers()...)
+	markers = append(markers, thirdPartyGenMarkers()...)
+	for _, marker := range markers {
 		if line == marker {
 			return true
 		}
@@ -524,6 +751,14 @@ func detectMarkerIndent(sectionStart string) string {
 		return "\t"
 	case "return &servers{\n":
 		return "\t\t"
+	case "type Clients struct {\n":
+		return "\t"
+	case "\t// New connection\n":
+		return "\t"
+	case "\t// Temp conection\n":
+		return "\t"
+	case "\treturn &Clients{\n":
+		return "\t\t"
 	default:
 		return "\t"
 	}
@@ -531,6 +766,35 @@ func detectMarkerIndent(sectionStart string) string {
 
 func normalizeGRPCName(name string) string {
 	return strcase.ToSnake(strings.ReplaceAll(strings.TrimSpace(name), " ", ""))
+}
+
+func parseGRPCClientName(name string) (string, string, error) {
+	target := strings.TrimSpace(name)
+	if target == "" {
+		return "", "", fmt.Errorf("grpc client package name is required")
+	}
+
+	target = strings.ReplaceAll(target, "\\", "/")
+	target = strings.ReplaceAll(target, ":", "/")
+	parts := strings.FieldsFunc(target, func(r rune) bool {
+		return r == '/'
+	})
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("grpc client package must be <thirdparty>/<service>")
+	}
+
+	thirdparty := normalizeGRPCName(parts[0])
+	service := normalizeGRPCName(parts[1])
+	if thirdparty == "" || service == "" {
+		return "", "", fmt.Errorf("grpc client package must be <thirdparty>/<service>")
+	}
+
+	return thirdparty, service, nil
+}
+
+func shouldSkipExistingGRPCClientFile(fx filex.FileX, path string) bool {
+	base := filepath.Base(path)
+	return fx.IsExist(path) && (base == "Makefile" || base == "clients.go")
 }
 
 func grpcServiceAlias(name string) string {
@@ -597,6 +861,64 @@ func grpcReturnMarkers() []string {
 		"// +codegen:return grpc",
 		"//+fibergen:return grpc",
 		"// +fibergen:return grpc",
+	}
+}
+
+func clientImportMarkers() []string {
+	return []string{
+		"//+codegen:import client:package",
+		"// +codegen:import client:package",
+		"//+fibergen:import client:package",
+		"// +fibergen:import client:package",
+	}
+}
+
+func clientStructMarkers() []string {
+	return []string{
+		"//+codegen:struct client",
+		"// +codegen:struct client",
+		"//+fibergen:struct client",
+		"// +fibergen:struct client",
+	}
+}
+
+func clientNewMarkers() []string {
+	return []string{
+		"//+codegen:func client:new",
+		"// +codegen:func client:new",
+		"//+fibergen:func client:new",
+		"// +fibergen:func client:new",
+	}
+}
+
+func clientAppendMarkers() []string {
+	return []string{
+		"//+codegen:func client:append",
+		"// +codegen:func client:append",
+		"//+fibergen:func client:append",
+		"// +fibergen:func client:append",
+	}
+}
+
+func clientReturnMarkers() []string {
+	return []string{
+		"//+codegen:return client",
+		"// +codegen:return client",
+		"//+fibergen:return client",
+		"// +fibergen:return client",
+	}
+}
+
+func thirdPartyGenMarkers() []string {
+	return []string{
+		"# //+codegen:func thirdparty:gen",
+		"# // +codegen:func thirdparty:gen",
+		"# //+fibergen:func thirdparty:gen",
+		"# // +fibergen:func thirdparty:gen",
+		"//+codegen:func thirdparty:gen",
+		"// +codegen:func thirdparty:gen",
+		"//+fibergen:func thirdparty:gen",
+		"// +fibergen:func thirdparty:gen",
 	}
 }
 

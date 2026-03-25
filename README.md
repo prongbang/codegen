@@ -144,6 +144,65 @@ This creates the following structure:
 codegen grpc init
 ```
 
+This creates the initial gRPC scaffold under `internal/app/grpc` and generates the default `health` service.
+
+### 1.2 Generate gRPC Server
+
+```sh
+codegen grpc server --new device
+```
+
+This creates:
+
+```
+internal/app/grpc/device/v1
+├── device.proto
+├── provider.go
+└── server.go
+```
+
+It also updates:
+- `internal/app/grpc/servers.go`
+- `wire.go`
+
+Then it runs:
+
+```sh
+make gen service=device version=v1
+wire
+```
+
+### 1.3 Generate gRPC Client
+
+Use the format `<thirdparty>/<service>`:
+
+```sh
+codegen grpc client --new core/device
+```
+
+This creates:
+
+```
+internal/thirdparty
+├── Makefile
+└── core
+    ├── clients.go
+    └── device
+        └── v1
+            ├── client.go
+            └── device.proto
+```
+
+It also updates:
+- `internal/thirdparty/core/clients.go`
+- `internal/thirdparty/Makefile`
+
+Then it runs:
+
+```sh
+make gen service=device version=v1 thirdparty=core
+```
+
 ### 2. Generate Features Prototype
 
 Generate a new feature module:

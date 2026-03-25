@@ -31,12 +31,12 @@ type recordFileX struct {
 	writes map[string]string
 }
 
-func (f *recordFileX) EnsureDir(string) error           { return nil }
-func (f *recordFileX) ReadFile(string) string           { return "" }
-func (f *recordFileX) Getwd() (string, error)           { return "", nil }
-func (f *recordFileX) Chdir(string) error               { return nil }
-func (f *recordFileX) IsExist(string) bool              { return false }
-func (f *recordFileX) IsDirExist(string) bool           { return false }
+func (f *recordFileX) EnsureDir(string) error { return nil }
+func (f *recordFileX) ReadFile(string) string { return "" }
+func (f *recordFileX) Getwd() (string, error) { return "", nil }
+func (f *recordFileX) Chdir(string) error     { return nil }
+func (f *recordFileX) IsExist(string) bool    { return false }
+func (f *recordFileX) IsDirExist(string) bool { return false }
 func (f *recordFileX) WriteFile(name string, data []byte) error {
 	if f.writes == nil {
 		f.writes = map[string]string{}
@@ -127,18 +127,18 @@ func (m *mockBinding) Bind(pkg option.Package) error {
 }
 
 type errFileX struct {
-	getwd    string
+	getwd     string
 	ensureErr error
-	writeErr error
+	writeErr  error
 }
 
-func (e *errFileX) EnsureDir(string) error      { return e.ensureErr }
+func (e *errFileX) EnsureDir(string) error         { return e.ensureErr }
 func (e *errFileX) WriteFile(string, []byte) error { return e.writeErr }
-func (e *errFileX) ReadFile(string) string      { return "" }
-func (e *errFileX) Getwd() (string, error)      { return e.getwd, nil }
-func (e *errFileX) Chdir(string) error          { return nil }
-func (e *errFileX) IsExist(string) bool         { return false }
-func (e *errFileX) IsDirExist(string) bool      { return false }
+func (e *errFileX) ReadFile(string) string         { return "" }
+func (e *errFileX) Getwd() (string, error)         { return e.getwd, nil }
+func (e *errFileX) Chdir(string) error             { return nil }
+func (e *errFileX) IsExist(string) bool            { return false }
+func (e *errFileX) IsDirExist(string) bool         { return false }
 
 func writeFile(t *testing.T, name, content string) {
 	t.Helper()
@@ -355,6 +355,64 @@ func NewServers(
 	}
 }
 
+func TestNormalizeGRPCClientsTextMovesMarkersToBottom(t *testing.T) {
+	input := `package core
+
+import (
+	"google.golang.org/grpc"
+	//+codegen:import client:package
+	devicev1 "github.com/acme/demo/internal/thirdparty/core/device/v1"
+)
+
+type Clients struct {
+	//+codegen:struct client
+	DeviceClient devicev1.DeviceServiceClient
+	conns []*grpc.ClientConn
+}
+
+func (c *Clients) Close() {
+	for _, c := range c.conns {
+		_ = c.Close()
+	}
+}
+
+func NewClients() *Clients {
+	var conns []*grpc.ClientConn
+
+	// New connection
+	//+codegen:func client:new
+	deviceCon, deviceClient := devicev1.NewClient()
+
+	// Temp conection
+	//+codegen:func client:append
+	conns = append(conns, deviceCon)
+
+	return &Clients{
+		//+codegen:return client
+		DeviceClient: deviceClient
+		conns: conns,
+	}
+}`
+
+	got := normalizeGRPCClientsText(input)
+
+	if !strings.Contains(got, "devicev1 \"github.com/acme/demo/internal/thirdparty/core/device/v1\"\n\t//+codegen:import client:package") {
+		t.Fatalf("import marker not moved to bottom:\n%s", got)
+	}
+	if !strings.Contains(got, "DeviceClient devicev1.DeviceServiceClient\n\t//+codegen:struct client\n\tconns []*grpc.ClientConn") {
+		t.Fatalf("struct marker not moved to bottom:\n%s", got)
+	}
+	if !strings.Contains(got, "deviceCon, deviceClient := devicev1.NewClient()\n\t//+codegen:func client:new") {
+		t.Fatalf("new marker not moved to bottom:\n%s", got)
+	}
+	if !strings.Contains(got, "conns = append(conns, deviceCon)\n\t//+codegen:func client:append") {
+		t.Fatalf("append marker not moved to bottom:\n%s", got)
+	}
+	if !strings.Contains(got, "DeviceClient: deviceClient,\n\t\t//+codegen:return client\n\t\tconns: conns,") {
+		t.Fatalf("return marker not normalized:\n%s", got)
+	}
+}
+
 func TestBindGRPCServersAddsServiceAndKeepsMarkers(t *testing.T) {
 	root := t.TempDir()
 	serversPath := filepath.Join(root, "internal", "app", "grpc", "servers.go")
@@ -410,6 +468,88 @@ func NewServers(
 	}
 	if !strings.Contains(got, "DeviceServiceServer: deviceServiceServer,\n\t\t//+codegen:return grpc") {
 		t.Fatalf("missing device return binding:\n%s", got)
+	}
+}
+
+func TestBindGRPCClientsAddsServiceAndKeepsMarkers(t *testing.T) {
+	root := t.TempDir()
+	clientsPath := filepath.Join(root, "internal", "thirdparty", "core", "clients.go")
+	writeFile(t, clientsPath, string(mustRender(t, template.InternalGRPCClientsTemplate, template.Project{ThirdParty: "core"})))
+
+	fx := filex.NewFileX()
+	if err := bindGRPCClients(fx, root, "github.com/acme/demo", "core", "device"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := readFile(t, clientsPath)
+	if !strings.Contains(got, `devicev1 "github.com/acme/demo/internal/thirdparty/core/device/v1"`) {
+		t.Fatalf("missing device import:\n%s", got)
+	}
+	if !strings.Contains(got, "DeviceClient devicev1.DeviceServiceClient\n\t//+codegen:struct client\n\tconns []*grpc.ClientConn") {
+		t.Fatalf("missing device field above marker:\n%s", got)
+	}
+	if !strings.Contains(got, "deviceCon, deviceClient := devicev1.NewClient()\n\t//+codegen:func client:new") {
+		t.Fatalf("missing new client binding above marker:\n%s", got)
+	}
+	if !strings.Contains(got, "conns = append(conns, deviceCon)\n\t//+codegen:func client:append") {
+		t.Fatalf("missing append binding above marker:\n%s", got)
+	}
+	if !strings.Contains(got, "DeviceClient: deviceClient,\n\t\t//+codegen:return client\n\t\tconns: conns,") {
+		t.Fatalf("missing return binding above marker:\n%s", got)
+	}
+}
+
+func TestBindGRPCThirdPartyMakefileAddsTargetAndKeepsMarker(t *testing.T) {
+	root := t.TempDir()
+	makefilePath := filepath.Join(root, "internal", "thirdparty", "Makefile")
+	writeFile(t, makefilePath, template.InternalGRPCClientMakefileTemplate)
+
+	fx := filex.NewFileX()
+	if err := bindGRPCThirdPartyMakefile(fx, root, "core", "device"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := readFile(t, makefilePath)
+	if !strings.Contains(got, "gen_core_device:\n\tmake gen service=device version=v1 thirdparty=core\n\n# //+codegen:func thirdparty:gen") {
+		t.Fatalf("missing make target or marker not kept at bottom:\n%s", got)
+	}
+}
+
+func TestBindGRPCMakefileAddsTargetAndKeepsMarker(t *testing.T) {
+	root := t.TempDir()
+	makefilePath := filepath.Join(root, "internal", "app", "grpc", "Makefile")
+	writeFile(t, makefilePath, template.InternalGRPCMakefileTemplate)
+
+	fx := filex.NewFileX()
+	if err := bindGRPCMakefile(fx, root, "device"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := readFile(t, makefilePath)
+	if !strings.Contains(got, "gen_device:\n\tmake gen service=device version=v1\n\n# //+codegen:func thirdparty:gen") {
+		t.Fatalf("missing make target or marker not kept at bottom:\n%s", got)
+	}
+}
+
+func TestParseGRPCClientName(t *testing.T) {
+	thirdparty, service, err := parseGRPCClientName("core/device")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if thirdparty != "core" || service != "device" {
+		t.Fatalf("unexpected target: %s/%s", thirdparty, service)
+	}
+
+	thirdparty, service, err = parseGRPCClientName("core:store")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if thirdparty != "core" || service != "store" {
+		t.Fatalf("unexpected target: %s/%s", thirdparty, service)
+	}
+
+	if _, _, err := parseGRPCClientName("device"); err == nil {
+		t.Fatal("expected invalid client package error")
 	}
 }
 
@@ -587,6 +727,7 @@ func CreateApp() {
 func TestGRPCGeneratorNewCreatesServiceAndRunsMakeAndWire(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "go.mod"), "module github.com/acme/demo\n")
+	writeFile(t, filepath.Join(root, "internal", "app", "grpc", "Makefile"), template.InternalGRPCMakefileTemplate)
 	writeFile(t, filepath.Join(root, "wire.go"), `package demo
 
 import (
@@ -628,6 +769,50 @@ func CreateApp() {
 	}
 
 	protoPath := filepath.Join(root, "internal", "app", "grpc", "device", "v1", "device.proto")
+	if got := readFile(t, protoPath); !strings.Contains(got, "service DeviceService") {
+		t.Fatalf("unexpected proto content:\n%s", got)
+	}
+	if got := readFile(t, filepath.Join(root, "internal", "app", "grpc", "Makefile")); !strings.Contains(got, "gen_device:\n\tmake gen service=device version=v1") {
+		t.Fatalf("unexpected makefile content:\n%s", got)
+	}
+}
+
+func TestGRPCGeneratorNewClientCreatesFilesAndRunsMake(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "go.mod"), "module github.com/acme/demo\n")
+	chdir(t, root)
+
+	cmd := &mockCommand{runErr: map[string]error{}, asyncErr: map[string]error{}}
+	grpcInstaller := &mockInstaller{}
+	wireInstaller := &mockInstaller{}
+	runner := &mockRunner{}
+	gen := NewGRPCGenerator(filex.NewFileX(), cmd, grpcInstaller, wireInstaller, runner)
+
+	if err := gen.NewClient("core/device"); err != nil {
+		t.Fatal(err)
+	}
+
+	if grpcInstaller.called != 1 {
+		t.Fatalf("expected grpc installer once, got %d", grpcInstaller.called)
+	}
+	if wireInstaller.called != 0 || runner.called != 0 {
+		t.Fatalf("wire should not run for grpc client generation, got install=%d run=%d", wireInstaller.called, runner.called)
+	}
+	if len(cmd.asyncCalls) != 1 || cmd.asyncCalls[0] != "make gen service=device version=v1 thirdparty=core" {
+		t.Fatalf("unexpected async calls: %+v", cmd.asyncCalls)
+	}
+
+	makefilePath := filepath.Join(root, "internal", "thirdparty", "Makefile")
+	if got := readFile(t, makefilePath); !strings.Contains(got, "gen_core_device:") {
+		t.Fatalf("unexpected makefile content:\n%s", got)
+	}
+
+	clientsPath := filepath.Join(root, "internal", "thirdparty", "core", "clients.go")
+	if got := readFile(t, clientsPath); !strings.Contains(got, "DeviceClient devicev1.DeviceServiceClient") {
+		t.Fatalf("unexpected clients content:\n%s", got)
+	}
+
+	protoPath := filepath.Join(root, "internal", "thirdparty", "core", "device", "v1", "device.proto")
 	if got := readFile(t, protoPath); !strings.Contains(got, "service DeviceService") {
 		t.Fatalf("unexpected proto content:\n%s", got)
 	}

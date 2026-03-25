@@ -45,8 +45,16 @@ func TestMainHelpPaths(t *testing.T) {
 		{"codegen", "-h"},
 		{"codegen", "grpc", "-h"},
 		{"codegen", "grpc", "init", "-h"},
+		{"codegen", "grpc", "server", "-h"},
+		{"codegen", "grpc", "client", "-h"},
 	} {
 		os.Args = args
 		main()
+	}
+}
+
+func TestNewGRPCGeneratorFactory(t *testing.T) {
+	if gen := newGRPCGenerator(); gen == nil {
+		t.Fatal("expected grpc generator")
 	}
 }

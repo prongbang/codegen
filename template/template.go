@@ -231,6 +231,18 @@ var InternalGRPCServerTemplate string
 //go:embed internal_grpc_makefile_template.tmpl
 var InternalGRPCMakefileTemplate string
 
+//go:embed internal_grpc_client_makefile_template.tmpl
+var InternalGRPCClientMakefileTemplate string
+
+//go:embed internal_grpc_clients_template.tmpl
+var InternalGRPCClientsTemplate string
+
+//go:embed internal_grpc_client_proto_template.tmpl
+var InternalGRPCClientProtoTemplate string
+
+//go:embed internal_grpc_client_template.tmpl
+var InternalGRPCClientTemplate string
+
 // Makefile
 
 //go:embed makefile_template.tmpl
@@ -366,6 +378,7 @@ type Project struct {
 	Fields       []Field
 	Module       string
 	Name         string
+	ThirdParty   string
 	Path         string
 	ListQuery    string
 	Alias        string
@@ -415,4 +428,8 @@ func (w Project) GRPCPackageName() string {
 
 func (w Project) GRPCVersionPackageName() string {
 	return fmt.Sprintf("%sv1", w.GRPCPackageName())
+}
+
+func (w Project) ThirdPartyName() string {
+	return strcase.ToSnake(w.ThirdParty)
 }
