@@ -13,7 +13,7 @@
 
 - 🏗️ **Clean Architecture** - Automatically generates layered architecture structure
 - 🔌 **Fiber Framework Support** - Optimized for the Fiber web framework
-- 🌐 **gRPC Support** - Built-in support for gRPC services (**in-progress**)
+- 🌐 **gRPC Support** - Built-in support for gRPC services
 - 🔄 **CRUD Generation** - Generate CRUD operations from JSON specifications
 - 🛠️ **Swagger CRUD Generation** - Generate Swagger CRUD operations
 - 🧩 **Modular Design** - Feature-based modules for better organization

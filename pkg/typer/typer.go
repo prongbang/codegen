@@ -57,13 +57,9 @@ func Operate(typ string) string {
 
 func Type(variable interface{}) string {
 	switch variable.(type) {
-	case int:
-	case int16:
-	case int32:
-	case int64:
+	case int, int16, int32, int64:
 		return "int64"
-	case float32:
-	case float64:
+	case float32, float64:
 		return "float64"
 	case bool:
 		return "boolean"

@@ -455,7 +455,7 @@ func normalizeGRPCServersText(text string) string {
 	text = normalizeSectionMarker(text, "type servers struct {\n", "\n}\n\nfunc (s *servers) Initials(svr *grpc.Server) {", grpcStructMarkers()[0], false)
 	text = normalizeSectionMarker(text, "func (s *servers) Initials(svr *grpc.Server) {\n", "\n}\n\nfunc NewServers(", grpcInitialsMarkers()[0], false)
 	text = normalizeSectionMarker(text, "func NewServers(\n", "\n) Servers {", grpcNewMarkers()[0], true)
-	text = normalizeSectionMarker(text, "return &servers{\n", "\n\t}\n}", grpcReturnMarkers()[0], false)
+	text = normalizeSectionMarker(text, "return &servers{\n", "\n\t}\n}", grpcReturnMarkers()[0], true)
 	return text
 }
 
