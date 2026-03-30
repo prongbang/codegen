@@ -5,13 +5,16 @@ import (
 )
 
 type Options struct {
-	Project string
-	Module  string
-	Feature string
-	Shared  string
-	Spec    string
-	Driver  string
-	Orm     string
+	Project   string
+	Module    string
+	Feature   string
+	Shared    string
+	Spec      string
+	Driver    string
+	Orm       string
+	Framework string
+	OpenAPI   bool
+	Patterns  []string
 }
 
 type Spec struct {

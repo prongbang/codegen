@@ -29,6 +29,12 @@ go install github.com/prongbang/codegen@v1.5.1
 
 ## 🚀 Quick Start
 
+Generate OpenAPI spec from a Fiber codebase:
+
+```shell
+codegen openapi -framework fiber ./... > docs/openapi.json
+```
+
 ### 1. Create a New Project
 
 Generate a new project with module structure:

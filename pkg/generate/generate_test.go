@@ -1,6 +1,7 @@
 package generate
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -177,13 +178,14 @@ func TestGeneratorDispatchesByOption(t *testing.T) {
 	project := &stubGenerator{}
 	feature := &stubGenerator{}
 	shared := &stubGenerator{}
-	gen := NewGenerator(project, feature, shared)
+	openAPI := &stubGenerator{}
+	gen := NewGenerator(project, feature, shared, openAPI)
 
 	if err := gen.Generate(option.Options{Project: "demo", Module: "github.com/acme/demo"}); err != nil {
 		t.Fatal(err)
 	}
-	if !project.called || feature.called || shared.called {
-		t.Fatalf("unexpected dispatch: project=%v feature=%v shared=%v", project.called, feature.called, shared.called)
+	if !project.called || feature.called || shared.called || openAPI.called {
+		t.Fatalf("unexpected dispatch: project=%v feature=%v shared=%v openapi=%v", project.called, feature.called, shared.called, openAPI.called)
 	}
 
 	project.called = false
@@ -201,12 +203,102 @@ func TestGeneratorDispatchesByOption(t *testing.T) {
 	if !shared.called {
 		t.Fatal("expected shared generator to be called")
 	}
+
+	shared.called = false
+	if err := gen.Generate(option.Options{OpenAPI: true, Framework: "fiber"}); err != nil {
+		t.Fatal(err)
+	}
+	if !openAPI.called {
+		t.Fatal("expected openapi generator to be called")
+	}
 }
 
 func TestGeneratorReturnsUnsupportedError(t *testing.T) {
-	gen := NewGenerator(&stubGenerator{}, &stubGenerator{}, &stubGenerator{})
+	gen := NewGenerator(&stubGenerator{}, &stubGenerator{}, &stubGenerator{}, &stubGenerator{})
 	if err := gen.Generate(option.Options{}); err == nil {
 		t.Fatal("expected unsupported option error")
+	}
+}
+
+func TestOpenAPIGeneratorRejectsUnsupportedFramework(t *testing.T) {
+	gen := NewOpenAPIGenerator()
+	if err := gen.Generate(option.Options{OpenAPI: true, Framework: "gin"}); err == nil {
+		t.Fatal("expected unsupported framework error")
+	}
+}
+
+func TestOpenAPIGeneratorBuildsSpec(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "router.go"), `package example
+
+import "github.com/gofiber/fiber/v2"
+
+type Handler interface {
+	Echo(c *fiber.Ctx) error
+}
+
+type router struct {
+	Handle Handler
+}
+
+func (r *router) Initial(app *fiber.App) {
+	v1 := app.Group("/v1")
+	v1.Post("/example/echo", r.Handle.Echo)
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "handler.go"), `package example
+
+import (
+	"context"
+	"github.com/gofiber/fiber/v2"
+)
+
+type handler struct {
+	Uc UseCase
+}
+
+func (h *handler) Echo(c *fiber.Ctx) error {
+	request := &EchoRequest{}
+	return wrap(func(ctx context.Context) (interface{}, error) {
+		return h.Uc.Echo(ctx, request)
+	})
+}
+
+func wrap(fn func(ctx context.Context) (interface{}, error)) error {
+	return nil
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "usecase.go"), `package example
+
+import "context"
+
+type UseCase interface {
+	Echo(ctx context.Context, obj *EchoRequest) (*Example, error)
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "model.go"), "package example\n\ntype EchoRequest struct { Name string `json:\"name\"` }\ntype Example struct { Name string `json:\"name\"` }\n")
+
+	origStdout := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = writer
+	defer func() { os.Stdout = origStdout }()
+
+	err = NewOpenAPIGenerator().Generate(option.Options{OpenAPI: true, Framework: "fiber", Patterns: []string{"./..."}})
+	_ = writer.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(reader); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "\"/v1/example/echo\"") {
+		t.Fatalf("expected route in output: %s", buf.String())
 	}
 }
 

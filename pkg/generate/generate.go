@@ -15,10 +15,13 @@ type generator struct {
 	ProjectGenerator Generator
 	FeatureGenerator Generator
 	SharedGenerator  Generator
+	OpenAPIGenerator Generator
 }
 
 func (f *generator) Generate(opt option.Options) error {
 	switch {
+	case opt.OpenAPI:
+		return f.OpenAPIGenerator.Generate(opt)
 	case opt.Project != "" && opt.Module != "":
 		return f.ProjectGenerator.Generate(opt)
 	case opt.Feature != "":
@@ -31,10 +34,11 @@ func (f *generator) Generate(opt option.Options) error {
 }
 
 // NewGenerator is new instance with func
-func NewGenerator(projectGenerator Generator, featureGenerator Generator, sharedGenerator Generator) Generator {
+func NewGenerator(projectGenerator Generator, featureGenerator Generator, sharedGenerator Generator, openAPIGenerator Generator) Generator {
 	return &generator{
 		ProjectGenerator: projectGenerator,
 		FeatureGenerator: featureGenerator,
 		SharedGenerator:  sharedGenerator,
+		OpenAPIGenerator: openAPIGenerator,
 	}
 }

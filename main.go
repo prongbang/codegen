@@ -27,6 +27,7 @@ type Flags struct {
 	Spec        string
 	Driver      string
 	Orm         string
+	Framework   string
 }
 
 func (f Flags) Project() string {
@@ -60,10 +61,31 @@ func newGRPCGenerator() generate.GRPCGenerator {
 	return generate.NewGRPCGenerator(fileX, cmd, grpcInstaller, wireInstaller, wireRunner)
 }
 
-func main() {
+func newGenerator() generate.Generator {
+	cmd := command.New()
+	arc := arch.New()
+	wireInstaller := tools.NewWireInstaller(cmd)
+	wireRunner := tools.NewWireRunner(cmd)
+	fileX := filex.NewFileX()
+	creatorX := creator.New(fileX)
+	installer := tools.New(
+		wireInstaller,
+		tools.NewSqlcInstaller(cmd, arc),
+		tools.NewDbmlInstaller(cmd, arc),
+	)
+	featureBinding := generate.NewFeatureBinding(fileX)
+	sharedBinding := generate.NewSharedBinding(fileX)
+	projectGenerator := generate.NewProjectGenerator(fileX)
+	featureGenerator := generate.NewFeatureGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, featureBinding)
+	sharedGenerator := generate.NewSharedGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, sharedBinding)
+	openAPIGenerator := generate.NewOpenAPIGenerator()
+	return generate.NewGenerator(projectGenerator, featureGenerator, sharedGenerator, openAPIGenerator)
+}
+
+func newApp() *cli.App {
 	flags := Flags{}
 
-	app := &cli.App{
+	return &cli.App{
 		Name:      "codegen",
 		Usage:     "Generate a Clean Architecture for REST API with support for the Fiber Web Framework in Golang",
 		Version:   "v1.4.5",
@@ -126,6 +148,28 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:  "openapi",
+				Usage: "Generate an OpenAPI spec",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "framework",
+						Aliases:     []string{"fw"},
+						Usage:       "-framework fiber",
+						Destination: &flags.Framework,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					if flags.Framework == "" {
+						return cli.ShowSubcommandHelp(c)
+					}
+					return newGenerator().Generate(option.Options{
+						Framework: flags.Framework,
+						OpenAPI:   true,
+						Patterns:  c.Args().Slice(),
+					})
+				},
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -180,28 +224,13 @@ func main() {
 				Driver:  flags.Driver,
 				Orm:     flags.Orm,
 			}
-			cmd := command.New()
-			arc := arch.New()
-			wireInstaller := tools.NewWireInstaller(cmd)
-			wireRunner := tools.NewWireRunner(cmd)
-			fileX := filex.NewFileX()
-			creatorX := creator.New(fileX)
-			installer := tools.New(
-				wireInstaller,
-				tools.NewSqlcInstaller(cmd, arc),
-				tools.NewDbmlInstaller(cmd, arc),
-			)
-			featureBinding := generate.NewFeatureBinding(fileX)
-			sharedBinding := generate.NewSharedBinding(fileX)
-			projectGenerator := generate.NewProjectGenerator(fileX)
-			featureGenerator := generate.NewFeatureGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, featureBinding)
-			sharedGenerator := generate.NewSharedGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, sharedBinding)
-			gen := generate.NewGenerator(projectGenerator, featureGenerator, sharedGenerator)
-			return gen.Generate(opt)
+			return newGenerator().Generate(opt)
 		},
 	}
+}
 
-	if err := app.Run(os.Args); err != nil {
+func main() {
+	if err := newApp().Run(os.Args); err != nil {
 		fmt.Println("[codegen]", err.Error())
 	}
 }
