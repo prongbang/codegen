@@ -24,6 +24,7 @@ type TypeRef struct {
 	Package string
 	Name    string
 	Elem    *TypeRef
+	TypeArgs []*TypeRef
 	Expr    ast.Expr
 }
 
@@ -64,9 +65,23 @@ func ExprToTypeRef(pkg *loader.Package, file *ast.File, expr ast.Expr) *TypeRef 
 			return &TypeRef{Kind: TypeNamed, Package: importPath, Name: value.Sel.Name, Expr: expr}
 		}
 	case *ast.IndexExpr:
-		return ExprToTypeRef(pkg, file, value.X)
+		ref := ExprToTypeRef(pkg, file, value.X)
+		if ref != nil {
+			ref.TypeArgs = []*TypeRef{ExprToTypeRef(pkg, file, value.Index)}
+			ref.Expr = expr
+		}
+		return ref
 	case *ast.IndexListExpr:
-		return ExprToTypeRef(pkg, file, value.X)
+		ref := ExprToTypeRef(pkg, file, value.X)
+		if ref != nil {
+			typeArgs := make([]*TypeRef, 0, len(value.Indices))
+			for _, index := range value.Indices {
+				typeArgs = append(typeArgs, ExprToTypeRef(pkg, file, index))
+			}
+			ref.TypeArgs = typeArgs
+			ref.Expr = expr
+		}
+		return ref
 	case *ast.Ellipsis:
 		return &TypeRef{Kind: TypeArray, Elem: ExprToTypeRef(pkg, file, value.Elt), Expr: expr}
 	}

@@ -3,6 +3,7 @@ package graph
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/prongbang/codegen/internal/analyzer"
@@ -130,5 +131,73 @@ type ImportEnergyConsumption struct {
 	}
 	if len(component.Required) != 2 || component.Required[0] != "file" || component.Required[1] != "token" {
 		t.Fatalf("unexpected required fields: %+v", component.Required)
+	}
+}
+
+func TestBuilderHandlesGenericAliasTypes(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
+	writeFile(t, filepath.Join(dir, "core", "paging.go"), `package core
+
+type Paging[T any] struct {
+	List T `+"`json:\"list\"`"+`
+	PageInfo
+}
+
+type PageInfo struct {
+	Page  int64 `+"`json:\"page\"`"+`
+	Limit int64 `+"`json:\"limit\"`"+`
+	Count int64 `+"`json:\"count\"`"+`
+	Total int64 `+"`json:\"total\"`"+`
+	Start int64 `+"`json:\"start\"`"+`
+	End   int64 `+"`json:\"end\"`"+`
+}
+`)
+	writeFile(t, filepath.Join(dir, "report", "types.go"), `package report
+
+import "github.com/acme/demo/core"
+
+type PagedReport core.Paging[*[]DataReport]
+
+type Report struct {
+	ID string `+"`json:\"id\"`"+`
+}
+
+type DataReport struct {
+	Report
+	Name string `+"`json:\"name\"`"+`
+}
+`)
+
+	mod, err := loader.Load([]string{"./..."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref := &analyzer.TypeRef{Kind: analyzer.TypeNamed, Package: "github.com/acme/demo/report", Name: "PagedReport"}
+	builder := NewBuilder(mod)
+	schema := builder.Build(ref)
+	if schema.Ref == "" {
+		t.Fatalf("expected ref schema: %+v", schema)
+	}
+	component := builder.Components["report_PagedReport"]
+	if component == nil || component.Ref == "" {
+		t.Fatal("expected report_PagedReport component")
+	}
+	targetName := strings.TrimPrefix(component.Ref, "#/components/schemas/")
+	target := builder.Components[targetName]
+	if target == nil {
+		t.Fatalf("expected generic target component: %+v", builder.Components)
+	}
+	list := target.Properties["list"]
+	if list == nil || list.Type != "array" || list.Items == nil || list.Items.Ref == "" {
+		t.Fatalf("expected generic list array: %+v", list)
+	}
+	itemComponent := builder.Components["report_DataReport"]
+	if itemComponent == nil || itemComponent.Properties["id"] == nil || itemComponent.Properties["name"] == nil {
+		t.Fatalf("expected embedded and direct item properties: %+v", itemComponent)
+	}
+	if target.Properties["page"] == nil || target.Properties["total"] == nil {
+		t.Fatalf("expected embedded page info properties: %+v", target.Properties)
 	}
 }

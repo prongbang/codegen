@@ -297,3 +297,74 @@ func do(c *fiber.Ctx, request interface{}, fn func(ctx context.Context) (interfa
 		t.Fatalf("unexpected response: %+v", ops[0].Response)
 	}
 }
+
+func TestAnalyzeFiberPrefersHandlerMethodWhenUsecaseSharesName(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "report", "router.go"), `package report
+
+import "github.com/gofiber/fiber/v2"
+
+type Handler interface {
+	Update(c *fiber.Ctx) error
+}
+
+type router struct {
+	Handle Handler
+}
+
+func (r *router) Initial(app *fiber.App) {
+	app.Post("/report/update", r.Handle.Update)
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "report", "handler.go"), `package report
+
+import (
+	"context"
+	"github.com/gofiber/fiber/v2"
+)
+
+type handler struct {
+	UseCase UseCase
+}
+
+func (h *handler) Update(c *fiber.Ctx) error {
+	request := &UpdateReportRequest{}
+	return h.UseCase.Update(context.Background(), request)
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "report", "usecase.go"), `package report
+
+import "context"
+
+type UseCase interface {
+	Update(ctx context.Context, obj *UpdateReportRequest) (*ReportResponse, error)
+}
+
+type useCase struct{}
+
+func (uc *useCase) Update(ctx context.Context, obj *UpdateReportRequest) (*ReportResponse, error) {
+	return &ReportResponse{}, nil
+}
+`)
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "report", "model.go"), "package report\n\ntype UpdateReportRequest struct { ID string `json:\"id\"` }\ntype ReportResponse struct { ID string `json:\"id\"` }\n")
+
+	mod, err := loader.Load([]string{"./..."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ops, err := AnalyzeFiber(mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("expected 1 operation, got %d", len(ops))
+	}
+	if ops[0].Request == nil || ops[0].Request.Name != "UpdateReportRequest" {
+		t.Fatalf("unexpected request: %+v", ops[0].Request)
+	}
+	if ops[0].Response == nil || ops[0].Response.Name != "ReportResponse" {
+		t.Fatalf("unexpected response: %+v", ops[0].Response)
+	}
+}

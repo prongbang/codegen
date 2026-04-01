@@ -57,7 +57,7 @@ func (b *Builder) Build(ref *analyzer.TypeRef) *Schema {
 		return &Schema{Type: "object"}
 	case analyzer.TypeObject:
 		if structType, ok := ref.Expr.(*ast.StructType); ok {
-			return b.buildInlineStruct(structType, nil, nil)
+			return b.buildInlineStruct(structType, nil, nil, nil)
 		}
 		return &Schema{Type: "object"}
 	case analyzer.TypeNamed:
@@ -85,7 +85,7 @@ func (b *Builder) Build(ref *analyzer.TypeRef) *Schema {
 			return &Schema{Ref: "#/components/schemas/" + componentName}
 		}
 		b.visiting[componentName] = true
-		b.Components[componentName] = b.buildNamed(typeDef)
+		b.Components[componentName] = b.buildNamed(typeDef, ref)
 		delete(b.visiting, componentName)
 		return &Schema{Ref: "#/components/schemas/" + componentName}
 	}
@@ -93,14 +93,15 @@ func (b *Builder) Build(ref *analyzer.TypeRef) *Schema {
 	return &Schema{Type: "object"}
 }
 
-func (b *Builder) buildNamed(typeDef *loader.TypeSpecRef) *Schema {
+func (b *Builder) buildNamed(typeDef *loader.TypeSpecRef, ref *analyzer.TypeRef) *Schema {
+	bindings := typeParamBindings(typeDef, ref)
 	switch value := typeDef.Spec.Type.(type) {
 	case *ast.StructType:
-		return b.buildInlineStruct(value, typeDef.Pkg, typeDef.File)
+		return b.buildInlineStruct(value, typeDef.Pkg, typeDef.File, bindings)
 	case *ast.ArrayType, *ast.MapType, *ast.InterfaceType:
-		return b.Build(analyzer.ExprToTypeRef(typeDef.Pkg, typeDef.File, value))
+		return b.Build(exprToTypeRefWithBindings(typeDef.Pkg, typeDef.File, value, bindings))
 	case *ast.Ident, *ast.SelectorExpr, *ast.StarExpr, *ast.IndexExpr, *ast.IndexListExpr:
-		return b.Build(analyzer.ExprToTypeRef(typeDef.Pkg, typeDef.File, value))
+		return b.Build(exprToTypeRefWithBindings(typeDef.Pkg, typeDef.File, value, bindings))
 	default:
 		return &Schema{Type: "object"}
 	}
@@ -125,13 +126,13 @@ func (b *Builder) flattenEmbedded(properties map[string]*Schema, required *[]str
 	*required = append(*required, component.Required...)
 }
 
-func (b *Builder) buildInlineStruct(structType *ast.StructType, pkg *loader.Package, file *ast.File) *Schema {
+func (b *Builder) buildInlineStruct(structType *ast.StructType, pkg *loader.Package, file *ast.File, bindings map[string]*analyzer.TypeRef) *Schema {
 	properties := map[string]*Schema{}
 	required := []string{}
 	for _, field := range structType.Fields.List {
 		if len(field.Names) == 0 {
 			if pkg != nil && file != nil {
-				embedded := analyzer.ExprToTypeRef(pkg, file, field.Type)
+				embedded := exprToTypeRefWithBindings(pkg, file, field.Type, bindings)
 				b.flattenEmbedded(properties, &required, embedded)
 			}
 			continue
@@ -148,7 +149,7 @@ func (b *Builder) buildInlineStruct(structType *ast.StructType, pkg *loader.Pack
 			}
 			var schema *Schema
 			if pkg != nil && file != nil {
-				schema = b.Build(analyzer.ExprToTypeRef(pkg, file, field.Type))
+				schema = b.Build(exprToTypeRefWithBindings(pkg, file, field.Type, bindings))
 			} else {
 				schema = inlineExprSchema(field.Type)
 			}
@@ -169,10 +170,131 @@ func (b *Builder) buildInlineStruct(structType *ast.StructType, pkg *loader.Pack
 func componentName(ref *analyzer.TypeRef) string {
 	base := path.Base(ref.Package)
 	if base == "." || base == "" || base == "/" {
-		return ref.Name
+		return ref.Name + typeArgsSuffix(ref)
 	}
 	replacer := strings.NewReplacer("-", "_", ".", "_")
-	return replacer.Replace(base) + "_" + ref.Name
+	return replacer.Replace(base) + "_" + ref.Name + typeArgsSuffix(ref)
+}
+
+func typeArgsSuffix(ref *analyzer.TypeRef) string {
+	if ref == nil || len(ref.TypeArgs) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(ref.TypeArgs))
+	for _, arg := range ref.TypeArgs {
+		parts = append(parts, sanitizeComponentPart(typeRefComponentPart(arg)))
+	}
+	return "__" + strings.Join(parts, "__")
+}
+
+func typeRefComponentPart(ref *analyzer.TypeRef) string {
+	if ref == nil {
+		return "nil"
+	}
+	switch ref.Kind {
+	case analyzer.TypeScalar:
+		return ref.Name
+	case analyzer.TypeNamed:
+		base := ref.Name
+		if ref.Package != "" {
+			base = path.Base(ref.Package) + "_" + ref.Name
+		}
+		if len(ref.TypeArgs) == 0 {
+			return base
+		}
+		parts := make([]string, 0, len(ref.TypeArgs)+1)
+		parts = append(parts, base)
+		for _, arg := range ref.TypeArgs {
+			parts = append(parts, typeRefComponentPart(arg))
+		}
+		return strings.Join(parts, "_")
+	case analyzer.TypeArray:
+		return "array_" + typeRefComponentPart(ref.Elem)
+	case analyzer.TypeMap:
+		return "map_" + typeRefComponentPart(ref.Elem)
+	case analyzer.TypeAny:
+		return "any"
+	case analyzer.TypeObject:
+		return "object"
+	default:
+		return "invalid"
+	}
+}
+
+func sanitizeComponentPart(value string) string {
+	replacer := strings.NewReplacer("-", "_", ".", "_", "/", "_", "*", "ptr", "[", "_", "]", "_", ",", "_", " ", "_")
+	return replacer.Replace(value)
+}
+
+func typeParamBindings(typeDef *loader.TypeSpecRef, ref *analyzer.TypeRef) map[string]*analyzer.TypeRef {
+	if typeDef == nil || typeDef.Spec == nil || typeDef.Spec.TypeParams == nil || ref == nil || len(ref.TypeArgs) == 0 {
+		return nil
+	}
+	params := typeDef.Spec.TypeParams.List
+	bindings := map[string]*analyzer.TypeRef{}
+	argIndex := 0
+	for _, field := range params {
+		for _, name := range field.Names {
+			if argIndex >= len(ref.TypeArgs) {
+				return bindings
+			}
+			bindings[name.Name] = cloneTypeRef(ref.TypeArgs[argIndex])
+			argIndex++
+		}
+	}
+	return bindings
+}
+
+func exprToTypeRefWithBindings(pkg *loader.Package, file *ast.File, expr ast.Expr, bindings map[string]*analyzer.TypeRef) *analyzer.TypeRef {
+	ref := analyzer.ExprToTypeRef(pkg, file, expr)
+	return applyTypeBindings(ref, pkg, bindings)
+}
+
+func applyTypeBindings(ref *analyzer.TypeRef, pkg *loader.Package, bindings map[string]*analyzer.TypeRef) *analyzer.TypeRef {
+	if ref == nil {
+		return nil
+	}
+	if len(bindings) == 0 {
+		return ref
+	}
+	switch ref.Kind {
+	case analyzer.TypeNamed:
+		if pkg != nil && ref.Package == pkg.ImportPath {
+			if bound, ok := bindings[ref.Name]; ok {
+				return cloneTypeRef(bound)
+			}
+		}
+		cloned := cloneTypeRef(ref)
+		if len(cloned.TypeArgs) > 0 {
+			for i, arg := range cloned.TypeArgs {
+				cloned.TypeArgs[i] = applyTypeBindings(arg, pkg, bindings)
+			}
+		}
+		return cloned
+	case analyzer.TypeArray, analyzer.TypeMap:
+		cloned := cloneTypeRef(ref)
+		cloned.Elem = applyTypeBindings(ref.Elem, pkg, bindings)
+		return cloned
+	default:
+		return ref
+	}
+}
+
+func cloneTypeRef(ref *analyzer.TypeRef) *analyzer.TypeRef {
+	if ref == nil {
+		return nil
+	}
+	cloned := *ref
+	if ref.Elem != nil {
+		cloned.Elem = cloneTypeRef(ref.Elem)
+	}
+	if len(ref.TypeArgs) > 0 {
+		cloned.TypeArgs = make([]*analyzer.TypeRef, len(ref.TypeArgs))
+		for i, arg := range ref.TypeArgs {
+			cloned.TypeArgs[i] = cloneTypeRef(arg)
+		}
+	}
+	return &cloned
 }
 
 func scalarSchema(name string) *Schema {

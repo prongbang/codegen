@@ -171,10 +171,23 @@ func analyzeRouteCall(pkg *loader.Package, call *ast.CallExpr, groupPaths map[st
 }
 
 func analyzeHandler(pkg *loader.Package, methodName string) (*TypeRef, *TypeRef, string, error) {
+	if requestType, responseType, usecaseMethod, ok := analyzeHandlerMethod(pkg, methodName, true); ok {
+		return requestType, responseType, usecaseMethod, nil
+	}
+	if requestType, responseType, usecaseMethod, ok := analyzeHandlerMethod(pkg, methodName, false); ok {
+		return requestType, responseType, usecaseMethod, nil
+	}
+	return nil, nil, "", fmt.Errorf("handler method %s not found", methodName)
+}
+
+func analyzeHandlerMethod(pkg *loader.Package, methodName string, preferHandlerReceiver bool) (*TypeRef, *TypeRef, string, bool) {
 	for _, file := range pkg.Files {
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if !ok || fn.Name.Name != methodName || fn.Body == nil || fn.Recv == nil {
+				continue
+			}
+			if preferHandlerReceiver != isHandlerReceiver(fn) {
 				continue
 			}
 
@@ -294,10 +307,10 @@ func analyzeHandler(pkg *loader.Package, methodName string) (*TypeRef, *TypeRef,
 				return usecaseMethod == ""
 			})
 
-			return requestType, responseType, usecaseMethod, nil
+			return requestType, responseType, usecaseMethod, true
 		}
 	}
-	return nil, nil, "", fmt.Errorf("handler method %s not found", methodName)
+	return nil, nil, "", false
 }
 
 func analyzeUsecaseCall(pkg *loader.Package, file *ast.File, results []ast.Expr, valueTypes map[string]*TypeRef) (string, *TypeRef) {
@@ -556,6 +569,30 @@ func usecaseMethodName(expr ast.Expr) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func isHandlerReceiver(fn *ast.FuncDecl) bool {
+	if fn == nil || fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return false
+	}
+	name := receiverTypeName(fn.Recv.List[0].Type)
+	name = strings.ToLower(name)
+	return name == "handler" || strings.HasSuffix(name, "handler")
+}
+
+func receiverTypeName(expr ast.Expr) string {
+	switch value := expr.(type) {
+	case *ast.StarExpr:
+		return receiverTypeName(value.X)
+	case *ast.Ident:
+		return value.Name
+	case *ast.IndexExpr:
+		return receiverTypeName(value.X)
+	case *ast.IndexListExpr:
+		return receiverTypeName(value.X)
+	default:
+		return ""
+	}
 }
 
 func copyGroupPaths(groupPaths map[string]string) map[string]string {
