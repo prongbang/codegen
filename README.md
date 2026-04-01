@@ -24,7 +24,7 @@
 
 Latest version:
 ```shell
-go install github.com/prongbang/codegen@v1.5.3
+go install github.com/prongbang/codegen@v1.5.4
 ```
 
 ## 🚀 Quick Start
