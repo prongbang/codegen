@@ -1,6 +1,6 @@
 module github.com/prongbang/codegen
 
-go 1.23.4
+go 1.24.4
 
 require (
 	github.com/ettle/strcase v0.2.0

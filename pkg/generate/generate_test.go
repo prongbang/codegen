@@ -834,6 +834,70 @@ func NewRouters(
 	}
 }
 
+func TestFeatureBindingBindSupportsFibergenMarkers(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "internal", "app", "api")
+	writeFile(t, filepath.Join(root, "wire.go"), `package demo
+
+import (
+	//+fibergen:import wire:package
+)
+
+func CreateApp() {
+	wire.Build(
+		//+fibergen:func wire:build
+	)
+}`)
+	writeFile(t, filepath.Join(apiDir, "routers.go"), `package api
+
+import (
+	//+fibergen:import routers:package
+)
+
+type routers struct {
+	//+fibergen:struct routers
+}
+
+func (r *routers) Initials(app any) {
+	//+fibergen:func initials
+}
+
+func NewRouters(
+	//+fibergen:func new:routers
+) any {
+	return &routers{
+		//+fibergen:return &routers
+	}
+}`)
+	chdir(t, apiDir)
+
+	err := NewFeatureBinding(filex.NewFileX()).Bind(option.Package{
+		Name: "device",
+		Module: mod.Mod{
+			Module:  "github.com/acme/demo",
+			AppPath: "internal/app",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wire := readFile(t, filepath.Join(root, "wire.go"))
+	if !strings.Contains(wire, `"github.com/acme/demo/internal/app/api/device"`) || !strings.Contains(wire, "device.ProviderSet,") {
+		t.Fatalf("unexpected fibergen wire binding:\n%s", wire)
+	}
+	if !strings.Contains(wire, "//+fibergen:import wire:package") || !strings.Contains(wire, "//+fibergen:func wire:build") {
+		t.Fatalf("expected fibergen wire markers to be preserved:\n%s", wire)
+	}
+	routers := readFile(t, filepath.Join(apiDir, "routers.go"))
+	if !strings.Contains(routers, "DeviceRoute device.Router") || !strings.Contains(routers, "r.DeviceRoute.Initial(app)") {
+		t.Fatalf("unexpected fibergen routers binding:\n%s", routers)
+	}
+	if !strings.Contains(routers, "//+fibergen:import routers:package") || !strings.Contains(routers, "//+fibergen:struct routers") || !strings.Contains(routers, "//+fibergen:func initials") || !strings.Contains(routers, "//+fibergen:func new:routers") || !strings.Contains(routers, "//+fibergen:return &routers") {
+		t.Fatalf("expected fibergen router markers to be preserved:\n%s", routers)
+	}
+}
+
 func TestSharedBindingBind(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "internal", "app", "api")
@@ -865,6 +929,43 @@ func CreateApp() {
 	wire := readFile(t, filepath.Join(root, "internal", "wire.go"))
 	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
 		t.Fatalf("unexpected shared wire binding:\n%s", wire)
+	}
+}
+
+func TestSharedBindingBindSupportsFibergenMarkers(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "internal", "app", "api")
+	writeFile(t, filepath.Join(apiDir, ".keep"), "")
+	writeFile(t, filepath.Join(root, "internal", "wire.go"), `package demo
+
+import (
+	//+fibergen:import wire:package
+)
+
+func CreateApp() {
+	wire.Build(
+		//+fibergen:func wire:build
+	)
+}`)
+	chdir(t, apiDir)
+
+	err := NewSharedBinding(filex.NewFileX()).Bind(option.Package{
+		Name: "cache",
+		Module: mod.Mod{
+			Module:  "github.com/acme/demo",
+			AppPath: "internal/app",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wire := readFile(t, filepath.Join(root, "internal", "wire.go"))
+	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
+		t.Fatalf("unexpected fibergen shared wire binding:\n%s", wire)
+	}
+	if !strings.Contains(wire, "//+fibergen:import wire:package") || !strings.Contains(wire, "//+fibergen:func wire:build") {
+		t.Fatalf("expected fibergen shared markers to be preserved:\n%s", wire)
 	}
 }
 
