@@ -201,3 +201,47 @@ type DataReport struct {
 		t.Fatalf("expected embedded page info properties: %+v", target.Properties)
 	}
 }
+
+func TestBuilderMarksPointerFieldsAsNullableAndOptional(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
+	writeFile(t, filepath.Join(dir, "model", "types.go"), `package model
+
+type Child struct {
+	ID string `+"`json:\"id\"`"+`
+}
+
+type Payload struct {
+	Name  string `+"`json:\"name\"`"+`
+	Child *Child `+"`json:\"child\"`"+`
+	Note  *string `+"`json:\"note\"`"+`
+}
+`)
+
+	mod, err := loader.Load([]string{"./..."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref := &analyzer.TypeRef{Kind: analyzer.TypeNamed, Package: "github.com/acme/demo/model", Name: "Payload"}
+	builder := NewBuilder(mod)
+	schema := builder.Build(ref)
+	if schema.Ref == "" {
+		t.Fatalf("expected ref schema: %+v", schema)
+	}
+	component := builder.Components["model_Payload"]
+	if component == nil {
+		t.Fatal("expected model_Payload component")
+	}
+	if len(component.Required) != 1 || component.Required[0] != "name" {
+		t.Fatalf("expected only name required: %+v", component.Required)
+	}
+	child := component.Properties["child"]
+	if child == nil || !child.Nullable || len(child.AllOf) != 1 || child.AllOf[0].Ref == "" {
+		t.Fatalf("expected nullable ref child field: %+v", child)
+	}
+	note := component.Properties["note"]
+	if note == nil || !note.Nullable || note.Type != "string" {
+		t.Fatalf("expected nullable scalar note field: %+v", note)
+	}
+}

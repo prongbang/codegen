@@ -13,8 +13,10 @@ import (
 
 type Schema struct {
 	Ref                  string             `json:"$ref,omitempty"`
+	AllOf                []*Schema          `json:"allOf,omitempty"`
 	Type                 string             `json:"type,omitempty"`
 	Format               string             `json:"format,omitempty"`
+	Nullable             bool               `json:"nullable,omitempty"`
 	Properties           map[string]*Schema `json:"properties,omitempty"`
 	Items                *Schema            `json:"items,omitempty"`
 	AdditionalProperties *Schema            `json:"additionalProperties,omitempty"`
@@ -152,6 +154,9 @@ func (b *Builder) buildInlineStruct(structType *ast.StructType, pkg *loader.Pack
 				schema = b.Build(exprToTypeRefWithBindings(pkg, file, field.Type, bindings))
 			} else {
 				schema = inlineExprSchema(field.Type)
+			}
+			if isPointerType(field.Type) {
+				schema = nullableSchema(schema)
 			}
 			properties[propName] = schema
 			if meta.Required || !isPointerLike(field.Type) && propName != "" && !hasOptionalTag(field) {
@@ -382,7 +387,7 @@ func unique(values []string) []string {
 func inlineExprSchema(expr ast.Expr) *Schema {
 	switch value := expr.(type) {
 	case *ast.StarExpr:
-		return inlineExprSchema(value.X)
+		return nullableSchema(inlineExprSchema(value.X))
 	case *ast.StructType:
 		properties := map[string]*Schema{}
 		required := []string{}
@@ -399,7 +404,11 @@ func inlineExprSchema(expr ast.Expr) *Schema {
 				if propName == "" {
 					propName = name.Name
 				}
-				properties[propName] = inlineExprSchema(field.Type)
+				fieldSchema := inlineExprSchema(field.Type)
+				if isPointerType(field.Type) {
+					fieldSchema = nullableSchema(fieldSchema)
+				}
+				properties[propName] = fieldSchema
 				if meta.Required || !isPointerLike(field.Type) && propName != "" && !hasOptionalTag(field) {
 					required = append(required, propName)
 				}
@@ -455,6 +464,55 @@ func hasOptionalTag(field *ast.Field) bool {
 		}
 	}
 	return false
+}
+
+func isPointerType(expr ast.Expr) bool {
+	_, ok := expr.(*ast.StarExpr)
+	return ok
+}
+
+func nullableSchema(schema *Schema) *Schema {
+	if schema == nil {
+		return &Schema{Type: "object", Nullable: true}
+	}
+	cloned := cloneSchema(schema)
+	if cloned.Ref != "" {
+		return &Schema{
+			AllOf:    []*Schema{{Ref: cloned.Ref}},
+			Nullable: true,
+		}
+	}
+	cloned.Nullable = true
+	return cloned
+}
+
+func cloneSchema(schema *Schema) *Schema {
+	if schema == nil {
+		return nil
+	}
+	cloned := *schema
+	if len(schema.AllOf) > 0 {
+		cloned.AllOf = make([]*Schema, len(schema.AllOf))
+		for i, item := range schema.AllOf {
+			cloned.AllOf[i] = cloneSchema(item)
+		}
+	}
+	if schema.Properties != nil {
+		cloned.Properties = make(map[string]*Schema, len(schema.Properties))
+		for key, value := range schema.Properties {
+			cloned.Properties[key] = cloneSchema(value)
+		}
+	}
+	if schema.Items != nil {
+		cloned.Items = cloneSchema(schema.Items)
+	}
+	if schema.AdditionalProperties != nil {
+		cloned.AdditionalProperties = cloneSchema(schema.AdditionalProperties)
+	}
+	if schema.Required != nil {
+		cloned.Required = append([]string(nil), schema.Required...)
+	}
+	return &cloned
 }
 
 func HasBinary(schema *Schema, components map[string]*Schema) bool {
