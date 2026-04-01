@@ -15,7 +15,7 @@
 - 🔌 **Fiber Framework Support** - Optimized for the Fiber web framework
 - 🌐 **gRPC Support** - Built-in support for gRPC services
 - 🔄 **CRUD Generation** - Generate CRUD operations from JSON specifications
-- 🛠️ **Swagger CRUD Generation** - Generate Swagger CRUD operations
+- 🛠️ **Open API Generation** - Generate Open API without configuration
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
 - ⚡ **Fast Development** - Speed up your development workflow
