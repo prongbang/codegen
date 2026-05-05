@@ -10,7 +10,7 @@ type Data{{.ModelName}} struct {
 }
 
 type Paged{{.ModelName}} struct {
-	*core.Paging
+	*core.Paging[[]{{.ModelName}}]
 }
 
 type Lite{{.ModelName}} struct {
