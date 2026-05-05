@@ -19,6 +19,26 @@ import (
 )
 
 func featureTemplates(pkg option.Package) map[string][]byte {
+	dsTmpl, _ := template.RenderText(template.DefaultDatasourceTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module, Path: pkg.Module.NewAppPath()})
+	hdTmpl, _ := template.RenderText(template.DefaultHandlerTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
+	pdTmpl, _ := template.RenderText(template.DefaultProviderTemplate, template.Project{Name: pkg.Name})
+	rpTmpl, _ := template.RenderText(template.DefaultRepositoryTemplate, template.Project{Name: pkg.Name})
+	rtTmpl, _ := template.RenderText(template.DefaultRouterTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
+	ucTmpl, _ := template.RenderText(template.DefaultUseCaseTemplate, template.Project{Name: pkg.Name})
+	mdTmpl, _ := template.RenderText(template.DefaultModelTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
+
+	return map[string][]byte{
+		"datasource.go":                dsTmpl,
+		"handler.go":                   hdTmpl,
+		"provider.go":                  pdTmpl,
+		"repository.go":                rpTmpl,
+		"router.go":                    rtTmpl,
+		"usecase.go":                   ucTmpl,
+		fmt.Sprintf("%s.go", pkg.Name): mdTmpl,
+	}
+}
+
+func packageTemplates(pkg option.Package) map[string][]byte {
 	dsTmpl, _ := template.RenderText(template.PrototypeDatasourceTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module, Path: pkg.Module.NewAppPath()})
 	hdTmpl, _ := template.RenderText(template.PrototypeHandlerTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
 	pdTmpl, _ := template.RenderText(template.PrototypeProviderTemplate, template.Project{Name: pkg.Name})
@@ -90,10 +110,23 @@ type featureGenerator struct {
 }
 
 func (f *featureGenerator) Generate(opt option.Options) error {
+	if opt.Package != "" {
+		return f.generatePackagePrototype(opt)
+	}
 	if opt.Driver != "" {
 		return f.generateFeatureCrud(opt)
 	}
 	return f.generateFeaturePrototype(opt)
+}
+
+func (f *featureGenerator) generatePackagePrototype(opt option.Options) error {
+	_ = f.WireInstaller.Install()
+	pkg := option.Package{Name: opt.Package, Module: mod.GetModule(f.FileX)}
+	for filename, tmpl := range packageTemplates(pkg) {
+		_ = f.Creator.Create(creator.Config{Pkg: pkg, Filename: filename, Template: tmpl})
+	}
+	_ = f.FeatureBinding.Bind(pkg)
+	return f.WireRunner.Run()
 }
 
 func (f *featureGenerator) generateFeaturePrototype(opt option.Options) error {

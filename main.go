@@ -22,6 +22,7 @@ type Flags struct {
 	ProjectName string
 	ModuleName  string
 	FeatureName string
+	PackageName string
 	SharedName  string
 	Crud        string
 	Spec        string
@@ -41,6 +42,13 @@ func (f Flags) Module() string {
 func (f Flags) Feature() string {
 	if f.FeatureName != "" {
 		return strcase.ToSnake(strings.ReplaceAll(f.FeatureName, " ", ""))
+	}
+	return ""
+}
+
+func (f Flags) Package() string {
+	if f.PackageName != "" {
+		return strcase.ToSnake(strings.ReplaceAll(f.PackageName, " ", ""))
 	}
 	return ""
 }
@@ -185,6 +193,12 @@ func newApp() *cli.App {
 				Destination: &flags.ModuleName,
 			},
 			&cli.StringFlag{
+				Name:        "package",
+				Aliases:     []string{"p"},
+				Usage:       "-p auth",
+				Destination: &flags.PackageName,
+			},
+			&cli.StringFlag{
 				Name:        "feature",
 				Aliases:     []string{"f"},
 				Usage:       "-f auth",
@@ -218,6 +232,7 @@ func newApp() *cli.App {
 			opt := option.Options{
 				Project: flags.Project(),
 				Module:  flags.Module(),
+				Package: flags.Package(),
 				Feature: flags.Feature(),
 				Shared:  flags.Shared(),
 				Spec:    flags.Spec,

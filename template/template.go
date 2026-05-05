@@ -279,6 +279,29 @@ var PrototypeRouterTemplate string
 //go:embed prototype_usecase_template.tmpl
 var PrototypeUseCaseTemplate string
 
+// Default
+
+//go:embed default_datasource_template.tmpl
+var DefaultDatasourceTemplate string
+
+//go:embed default_handler_template.tmpl
+var DefaultHandlerTemplate string
+
+//go:embed default_model_template.tmpl
+var DefaultModelTemplate string
+
+//go:embed default_provider_template.tmpl
+var DefaultProviderTemplate string
+
+//go:embed default_repository_template.tmpl
+var DefaultRepositoryTemplate string
+
+//go:embed default_router_template.tmpl
+var DefaultRouterTemplate string
+
+//go:embed default_usecase_template.tmpl
+var DefaultUseCaseTemplate string
+
 // Example
 
 //go:embed example_datasource_template.tmpl

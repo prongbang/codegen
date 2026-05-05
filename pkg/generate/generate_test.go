@@ -189,6 +189,14 @@ func TestGeneratorDispatchesByOption(t *testing.T) {
 	}
 
 	project.called = false
+	if err := gen.Generate(option.Options{Package: "admin"}); err != nil {
+		t.Fatal(err)
+	}
+	if !feature.called {
+		t.Fatal("expected feature generator to be called for package")
+	}
+
+	feature.called = false
 	if err := gen.Generate(option.Options{Feature: "user"}); err != nil {
 		t.Fatal(err)
 	}
@@ -419,6 +427,15 @@ func TestFeatureAndSharedTemplates(t *testing.T) {
 
 	if got := featureTemplates(pkg); len(got) != 7 {
 		t.Fatalf("unexpected feature template count: %d", len(got))
+	}
+	if got := packageTemplates(pkg); len(got) != 7 {
+		t.Fatalf("unexpected package template count: %d", len(got))
+	}
+	if strings.Contains(string(featureTemplates(pkg)["handler.go"]), "Example(c *fiber.Ctx)") {
+		t.Fatal("expected feature templates to use default handler template")
+	}
+	if !strings.Contains(string(packageTemplates(pkg)["handler.go"]), "Example(c *fiber.Ctx)") {
+		t.Fatal("expected package templates to use prototype handler template")
 	}
 	if got := sharedTemplates(pkg); len(got) != 4 {
 		t.Fatalf("unexpected shared template count: %d", len(got))
@@ -1125,6 +1142,17 @@ func TestFeatureGeneratorPrototypeAndCrud(t *testing.T) {
 	}
 	if wireInstaller.called != 1 || installer.called != 0 || runner.called != 1 || binding.called != 1 || len(creator.configs) != 7 {
 		t.Fatalf("unexpected prototype flow: wire=%d install=%d run=%d bind=%d create=%d", wireInstaller.called, installer.called, runner.called, binding.called, len(creator.configs))
+	}
+
+	creator.configs = nil
+	binding.called = 0
+	runner.called = 0
+	wireInstaller.called = 0
+	if err := gen.Generate(option.Options{Package: "device"}); err != nil {
+		t.Fatal(err)
+	}
+	if wireInstaller.called != 1 || installer.called != 0 || runner.called != 1 || binding.called != 1 || len(creator.configs) != 7 {
+		t.Fatalf("unexpected package flow: wire=%d install=%d run=%d bind=%d create=%d", wireInstaller.called, installer.called, runner.called, binding.called, len(creator.configs))
 	}
 
 	creator.configs = nil

@@ -24,6 +24,8 @@ func (f *generator) Generate(opt option.Options) error {
 		return f.OpenAPIGenerator.Generate(opt)
 	case opt.Project != "" && opt.Module != "":
 		return f.ProjectGenerator.Generate(opt)
+	case opt.Package != "":
+		return f.FeatureGenerator.Generate(opt)
 	case opt.Feature != "":
 		return f.FeatureGenerator.Generate(opt)
 	case opt.Shared != "":

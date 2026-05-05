@@ -47,6 +47,7 @@ func TestFlagsHelpers(t *testing.T) {
 	flags := Flags{
 		ProjectName: "Hello World",
 		ModuleName:  "github.com/acme",
+		PackageName: "Admin User",
 		FeatureName: "User Profile",
 		SharedName:  "Auth Token",
 	}
@@ -60,6 +61,9 @@ func TestFlagsHelpers(t *testing.T) {
 	if got := flags.Feature(); got != "user_profile" {
 		t.Fatalf("unexpected feature: %s", got)
 	}
+	if got := flags.Package(); got != "admin_user" {
+		t.Fatalf("unexpected package: %s", got)
+	}
 	if got := flags.Shared(); got != "auth_token" {
 		t.Fatalf("unexpected shared: %s", got)
 	}
@@ -69,6 +73,9 @@ func TestFlagsEmptyFeatureAndShared(t *testing.T) {
 	flags := Flags{}
 	if got := flags.Feature(); got != "" {
 		t.Fatalf("expected empty feature, got %s", got)
+	}
+	if got := flags.Package(); got != "" {
+		t.Fatalf("expected empty package, got %s", got)
 	}
 	if got := flags.Shared(); got != "" {
 		t.Fatalf("expected empty shared, got %s", got)

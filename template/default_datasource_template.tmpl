@@ -1,0 +1,11 @@
+package {{.PackageName}}
+
+type DataSource interface {
+}
+
+type dataSource struct {
+}
+
+func NewDataSource() DataSource {
+	return &dataSource{}
+}

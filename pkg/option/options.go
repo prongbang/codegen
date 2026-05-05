@@ -7,6 +7,7 @@ import (
 type Options struct {
 	Project   string
 	Module    string
+	Package   string
 	Feature   string
 	Shared    string
 	Spec      string
