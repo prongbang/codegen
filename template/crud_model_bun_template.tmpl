@@ -32,7 +32,7 @@ type Data{{.ModelName}} struct {
 	{{.ModelName}}
 }
 
-type Paged{{.ModelName}} core.Paging
+type Paged{{.ModelName}} core.Paging[*[]Data{{.ModelName}}]
 
 type Lite{{.ModelName}} struct {
 {{- range $field := $fields }}
