@@ -24,7 +24,7 @@
 
 Latest version:
 ```shell
-go install github.com/prongbang/codegen@v1.5.7
+go install github.com/prongbang/codegen@v1.5.8
 ```
 
 ## 🚀 Quick Start
@@ -74,13 +74,10 @@ This creates the following structure:
 │     ├── app
 │     │     ├── api
 │     │     │     ├── api.go
-│     │     │     ├── example
-│     │     │     │     ├── datasource.go
-│     │     │     │     ├── example.go
+│     │     │     ├── health
+│     │     │     │     ├── health.go
 │     │     │     │     ├── handler.go
-│     │     │     │     ├── permission.go
 │     │     │     │     ├── provider.go
-│     │     │     │     ├── repository.go
 │     │     │     │     ├── router.go
 │     │     │     │     └── usecase.go
 │     │     │     └── routers.go
@@ -97,18 +94,12 @@ This creates the following structure:
 │     │     ├── jwt.go
 │     │     └── on_request.go
 │     ├── pkg
-│     │     ├── casbinx
-│     │     │     └── casbinx.go
-│     │     ├── response
-│     │     │     └── response.go
-│     │     └── validator
-│     │         └── validator.go
-│     └── shared
-│           └── example
-│               ├── datasource.go
-│               ├── example.go
-│               ├── provider.go
-│               └── repository.go
+│           ├── casbinx
+│           │     └── casbinx.go
+│           ├── response
+│           │     └── response.go
+│           └── validator
+│               └── validator.go
 │
 ├── pkg
 │     ├── core

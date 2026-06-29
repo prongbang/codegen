@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 	"{{.Module}}/pkg/core"
-	"{{.Module}}/internal/app/api/example"
+	"{{.Module}}/internal/app/api/health"
 	//+codegen:import routers:package
 )
 
@@ -12,21 +12,21 @@ type Routers interface {
 }
 
 type routers struct {
-    ExampleRoute example.Router
+    HealthRoute health.Router
 	//+codegen:struct routers
 }
 
 func (r *routers) Initials(app *fiber.App) {
-    r.ExampleRoute.Initial(app)
+    r.HealthRoute.Initial(app)
 	//+codegen:func initials
 }
 
 func NewRouters(
-    exampleRoute example.Router,
+    healthRoute health.Router,
 	//+codegen:func new:routers
 ) Routers {
 	return &routers{
-	    ExampleRoute: exampleRoute,
+	    HealthRoute: healthRoute,
 		//+codegen:return &routers
 	}
 }

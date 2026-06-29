@@ -1,0 +1,13 @@
+package health
+
+import (
+    "{{.Module}}/pkg/core"
+)
+
+type Health struct {
+	Message string `json:"message"`
+}
+
+type HealthRequest struct {
+    UserRequestInfo *core.UserRequestInfo `json:"-"`
+}

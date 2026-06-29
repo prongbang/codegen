@@ -1,0 +1,27 @@
+package health
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"{{.Module}}/pkg/core"
+)
+
+type Router interface {
+	core.Router
+}
+
+type router struct {
+	Handle Handler
+}
+
+func (r *router) Initial(app *fiber.App) {
+	v1 := app.Group("/v1")
+	{
+        v1.Get("/health", r.Handle.Health)
+	}
+}
+
+func NewRouter(handle Handler) Router {
+	return &router{
+		Handle: handle,
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/dreamph/dbre"
+	"github.com/innotechdevops/core/stringx"
 	"github.com/dreamph/dbre/adapters/bun"
 	"{{.Module}}/pkg/core"
 )
@@ -64,7 +65,7 @@ func (d *dataSource) FindList(ctx context.Context, obj *List{{.ModelName}}Criter
 		if err != nil {
 			return nil, 0, err
 		}
-		if core.IsNotEmpty(sortSQL) {
+		if stringx.IsNotEmpty(sortSQL) {
 			queryBuilder.AddQuery(fmt.Sprintf("ORDER BY %s", sortSQL))
 		}
 

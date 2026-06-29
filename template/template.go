@@ -302,31 +302,22 @@ var DefaultRouterTemplate string
 //go:embed default_usecase_template.tmpl
 var DefaultUseCaseTemplate string
 
-// Example
+// Health
 
-//go:embed example_datasource_template.tmpl
-var ExampleDatasourceTemplate string
+//go:embed health_handler_template.tmpl
+var HealthHandlerTemplate string
 
-//go:embed example_handler_template.tmpl
-var ExampleHandlerTemplate string
+//go:embed health_model_template.tmpl
+var HealthModelTemplate string
 
-//go:embed example_model_template.tmpl
-var ExampleModelTemplate string
+//go:embed health_provider_template.tmpl
+var HealthProviderTemplate string
 
-//go:embed example_provider_template.tmpl
-var ExampleProviderTemplate string
+//go:embed health_router_template.tmpl
+var HealthRouterTemplate string
 
-//go:embed example_repository_template.tmpl
-var ExampleRepositoryTemplate string
-
-//go:embed example_router_template.tmpl
-var ExampleRouterTemplate string
-
-//go:embed example_usecase_template.tmpl
-var ExampleUseCaseTemplate string
-
-//go:embed example_permission_template.tmpl
-var ExamplePermissionTemplate string
+//go:embed health_usecase_template.tmpl
+var HealthUseCaseTemplate string
 
 // RequestX
 

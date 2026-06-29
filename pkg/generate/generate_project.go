@@ -94,42 +94,29 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 			Data:     template.Project{Module: opt.Module},
 		},
 
-		// Example files
+		// Health files
 		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/datasource.go", currentDir),
-			Template: template.ExampleDatasourceTemplate,
+			Path:     fmt.Sprintf("%s/internal/app/api/health/handler.go", currentDir),
+			Template: template.HealthHandlerTemplate,
 			Data:     template.Project{Module: opt.Module},
 		},
 		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/handler.go", currentDir),
-			Template: template.ExampleHandlerTemplate,
+			Path:     fmt.Sprintf("%s/internal/app/api/health/health.go", currentDir),
+			Template: template.HealthModelTemplate,
 			Data:     template.Project{Module: opt.Module},
 		},
 		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/example.go", currentDir),
-			Template: template.ExampleModelTemplate,
+			Path:     fmt.Sprintf("%s/internal/app/api/health/provider.go", currentDir),
+			Template: template.HealthProviderTemplate,
+		},
+		{
+			Path:     fmt.Sprintf("%s/internal/app/api/health/router.go", currentDir),
+			Template: template.HealthRouterTemplate,
 			Data:     template.Project{Module: opt.Module},
 		},
 		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/permission.go", currentDir),
-			Template: template.ExamplePermissionTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/provider.go", currentDir),
-			Template: template.ExampleProviderTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/repository.go", currentDir),
-			Template: template.ExampleRepositoryTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/router.go", currentDir),
-			Template: template.ExampleRouterTemplate,
-			Data:     template.Project{Module: opt.Module},
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/app/api/example/usecase.go", currentDir),
-			Template: template.ExampleUseCaseTemplate,
+			Path:     fmt.Sprintf("%s/internal/app/api/health/usecase.go", currentDir),
+			Template: template.HealthUseCaseTemplate,
 		},
 
 		// Database files

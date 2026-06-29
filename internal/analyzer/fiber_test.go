@@ -36,7 +36,7 @@ func TestAnalyzeFiberSupportsNestedGroupsAndDirectUsecaseCalls(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)
 	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "router.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "router.go"), `package health
 
 import (
 	"github.com/gofiber/fiber/v2"
@@ -54,13 +54,13 @@ type Router struct {
 
 func (r *Router) Initial(app *fiber.App) {
 	v1 := app.Group("/v1")
-	example := v1.Group("/example")
+	health := v1.Group("/health")
 	{
-		example.Post("/create", r.OnRequest.Handler("perm"), r.Handle.Create)
+		health.Post("/create", r.OnRequest.Handler("perm"), r.Handle.Create)
 	}
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "handler.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "handler.go"), `package health
 
 import (
 	"context"
@@ -76,7 +76,7 @@ func (h *handler) Create(c *fiber.Ctx) error {
 	return h.uc.Create(context.Background(), payload)
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "usecase.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "usecase.go"), `package health
 
 import "context"
 
@@ -92,7 +92,7 @@ type OnRequest interface {
 	Handler(permissionId string, options ...func()) fiber.Handler
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "model.go"), "package example\n\ntype CreateRequest struct { Name string `json:\"name\"` }\ntype CreateResponse struct { ID string `json:\"id\"` }\n")
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "model.go"), "package health\n\ntype CreateRequest struct { Name string `json:\"name\"` }\ntype CreateResponse struct { ID string `json:\"id\"` }\n")
 
 	mod, err := loader.Load([]string{"./..."})
 	if err != nil {
@@ -105,7 +105,7 @@ type OnRequest interface {
 	if len(ops) != 1 {
 		t.Fatalf("expected 1 operation, got %d", len(ops))
 	}
-	if ops[0].Path != "/v1/example/create" {
+	if ops[0].Path != "/v1/health/create" {
 		t.Fatalf("unexpected path: %s", ops[0].Path)
 	}
 	if ops[0].Request == nil || ops[0].Request.Name != "CreateRequest" {

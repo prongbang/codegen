@@ -16,16 +16,6 @@ type handler struct {
 	ApiHandler requestx.ApiHandler
 }
 
-// Example
-// @Tags {{.TagsName}}
-// @Summary Example
-// @Accept json
-// @Produce json
-// @Success 200 {object} core.Success{data={{.ModelName}}}
-// @Failure 400 {object} core.Error
-// @Failure 404 {object} core.Error
-// @Security JWTAuth
-// @Router /v1/{{.RouteName}}/example [post]
 func (h *handler) Example(c *fiber.Ctx) error {
 		request := &One{{.ModelName}}Request{}
     	return h.ApiHandler.Do(c, request, true, func(ctx context.Context, requestInfo *core.RequestInfo) (interface{}, error) {

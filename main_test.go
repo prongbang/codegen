@@ -125,12 +125,12 @@ func TestOpenAPICommandGeneratesFiberSpec(t *testing.T) {
 	})
 
 	writeTextFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
-	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "example", "router.go"), `package example
+	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "health", "router.go"), `package health
 
 import "github.com/gofiber/fiber/v2"
 
 type Handler interface {
-	Echo(c *fiber.Ctx) error
+	Health(c *fiber.Ctx) error
 }
 
 type router struct {
@@ -140,11 +140,11 @@ type router struct {
 func (r *router) Initial(app *fiber.App) {
 	v1 := app.Group("/v1")
 	{
-		v1.Post("/example/echo", r.Handle.Echo)
+		v1.Post("/health", r.Handle.Health)
 	}
 }
 `)
-	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "example", "handler.go"), `package example
+	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "health", "handler.go"), `package health
 
 import (
 	"context"
@@ -155,10 +155,10 @@ type handler struct {
 	Uc UseCase
 }
 
-func (h *handler) Echo(c *fiber.Ctx) error {
-	request := &EchoRequest{}
+func (h *handler) Health(c *fiber.Ctx) error {
+	request := &HealthRequest{}
 	return do(c, request, func(ctx context.Context) (interface{}, error) {
-		return h.Uc.Echo(ctx, request)
+		return h.Uc.Health(ctx, request)
 	})
 }
 
@@ -166,21 +166,21 @@ func do(c *fiber.Ctx, request interface{}, fn func(ctx context.Context) (interfa
 	return nil
 }
 `)
-	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "example", "usecase.go"), `package example
+	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "health", "usecase.go"), `package health
 
 import "context"
 
 type UseCase interface {
-	Echo(ctx context.Context, obj *EchoRequest) (*Example, error)
+	Health(ctx context.Context, obj *HealthRequest) (*Health, error)
 }
 `)
-	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "example", "model.go"), `package example
+	writeTextFile(t, filepath.Join(dir, "internal", "app", "api", "health", "model.go"), `package health
 
-type EchoRequest struct {
+type HealthRequest struct {
 	Name string `+"`json:\"name\"`"+`
 }
 
-type Example struct {
+type Health struct {
 	Name string `+"`json:\"name\"`"+`
 	Meta Meta   `+"`json:\"meta\"`"+`
 }
@@ -203,8 +203,8 @@ type Meta struct {
 	if !ok {
 		t.Fatalf("expected paths in output: %s", output)
 	}
-	if _, ok := paths["/v1/example/echo"]; !ok {
-		t.Fatalf("expected /v1/example/echo in output: %s", output)
+	if _, ok := paths["/v1/health"]; !ok {
+		t.Fatalf("expected /v1/health in output: %s", output)
 	}
 
 	components, ok := doc["components"].(map[string]interface{})
@@ -215,7 +215,7 @@ type Meta struct {
 	if !ok {
 		t.Fatalf("expected schemas in output: %s", output)
 	}
-	for _, key := range []string{"example_EchoRequest", "example_Example", "example_Meta"} {
+	for _, key := range []string{"health_HealthRequest", "health_Health", "health_Meta"} {
 		if _, ok := schemas[key]; !ok {
 			t.Fatalf("expected schema %s in output: %s", key, output)
 		}

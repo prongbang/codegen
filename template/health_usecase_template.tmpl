@@ -1,0 +1,22 @@
+package health
+
+import (
+	"context"
+)
+
+type UseCase interface {
+	Health(ctx context.Context, obj *HealthRequest) (*Health, error)
+}
+
+type useCase struct {
+}
+
+func (uc *useCase) Health(ctx context.Context, obj *HealthRequest) (*Health, error) {
+	return &Health{
+        Message: "OK",
+	}, nil
+}
+
+func NewUseCase() UseCase {
+	return &useCase{}
+}

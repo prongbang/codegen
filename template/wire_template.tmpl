@@ -7,27 +7,23 @@ import (
 	"github.com/google/wire"
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/app/api"
-	"{{.Module}}/internal/app/api/example"
+	"{{.Module}}/internal/app/api/health"
 	"{{.Module}}/internal/database"
 	"{{.Module}}/internal/pkg/response"
 	"{{.Module}}/internal/pkg/validator"
-	"{{.Module}}/internal/middleware"
 	"{{.Module}}/pkg/requestx"
 	//+codegen:import wire:package
 )
 
 func CreateApp(dbDriver database.Drivers) app.App {
 	wire.Build(
-		database.NewDB,
-		database.NewDBTx,
 		app.NewApp,
 		api.New,
 		api.NewRouters,
 		response.New,
 		validator.New,
 		requestx.NewRequestHandler,
-		middleware.NewOnRequestGuard,
-		example.ProviderSet,
+		health.ProviderSet,
 		//+codegen:func wire:build
 	)
 	return nil

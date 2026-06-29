@@ -239,7 +239,7 @@ func TestOpenAPIGeneratorBuildsSpec(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)
 	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/acme/demo\n\ngo 1.23.4\n")
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "router.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "router.go"), `package health
 
 import "github.com/gofiber/fiber/v2"
 
@@ -253,10 +253,10 @@ type router struct {
 
 func (r *router) Initial(app *fiber.App) {
 	v1 := app.Group("/v1")
-	v1.Post("/example/echo", r.Handle.Echo)
+	v1.Post("/health/echo", r.Handle.Echo)
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "handler.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "handler.go"), `package health
 
 import (
 	"context"
@@ -278,15 +278,15 @@ func wrap(fn func(ctx context.Context) (interface{}, error)) error {
 	return nil
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "usecase.go"), `package example
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "usecase.go"), `package health
 
 import "context"
 
 type UseCase interface {
-	Echo(ctx context.Context, obj *EchoRequest) (*Example, error)
+	Health(ctx context.Context, obj *HealthRequest) (*Health, error)
 }
 `)
-	writeFile(t, filepath.Join(dir, "internal", "app", "api", "example", "model.go"), "package example\n\ntype EchoRequest struct { Name string `json:\"name\"` }\ntype Example struct { Name string `json:\"name\"` }\n")
+	writeFile(t, filepath.Join(dir, "internal", "app", "api", "health", "model.go"), "package health\n\ntype EchoRequest struct { Name string `json:\"name\"` }\ntype Health struct { Name string `json:\"name\"` }\n")
 
 	origStdout := os.Stdout
 	reader, writer, err := os.Pipe()
@@ -305,7 +305,7 @@ type UseCase interface {
 	if _, err := buf.ReadFrom(reader); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "\"/v1/example/echo\"") {
+	if !strings.Contains(buf.String(), "\"/v1/health/echo\"") {
 		t.Fatalf("expected route in output: %s", buf.String())
 	}
 }

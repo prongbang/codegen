@@ -1,4 +1,4 @@
-package example
+package health
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 )
 
 type Handler interface {
-	Echo(c *fiber.Ctx) error
+	Health(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -18,21 +18,11 @@ type handler struct {
 	ApiHandler requestx.ApiHandler
 }
 
-// Echo
-// @Tags example
-// @Summary Echo
-// @Accept json
-// @Produce json
-// @Success 200 {object} core.Success{data=Example}
-// @Failure 400 {object} core.Error
-// @Failure 404 {object} core.Error
-// @Security JWTAuth
-// @Router /v1/example/echo [post]
-func (h *handler) Echo(c *fiber.Ctx) error {
-	request := &EchoExampleRequest{}
+func (h *handler) Health(c *fiber.Ctx) error {
+	request := &HealthRequest{}
 	return h.ApiHandler.Do(c, request, true, func(ctx context.Context, requestInfo *core.RequestInfo) (interface{}, error) {
 		request.UserRequestInfo = requestInfo.UserRequestInfo
-		return h.Uc.Echo(ctx, request)
+		return h.Uc.Health(ctx, request)
 	})
 }
 

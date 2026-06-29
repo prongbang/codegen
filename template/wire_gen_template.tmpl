@@ -9,9 +9,8 @@ package {{.PackageName}}
 import (
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/app/api"
-	"{{.Module}}/internal/app/api/example"
+	"{{.Module}}/internal/app/api/health"
 	"{{.Module}}/internal/database"
-	"{{.Module}}/internal/middleware"
 	"{{.Module}}/internal/pkg/response"
 	"{{.Module}}/internal/pkg/validator"
 	"{{.Module}}/pkg/requestx"
@@ -20,17 +19,12 @@ import (
 // Injectors from wire.go:
 
 func CreateApp(dbDriver database.Drivers) app.App {
-	appIDB := database.NewDB(dbDriver)
-	dataSource := example.NewDataSource(appIDB)
-	repository := example.NewRepository(dataSource)
-	dbTx := database.NewDBTx(dbDriver)
-	useCase := example.NewUseCase(repository, dbTx)
+	useCase := health.NewUseCase()
 	fibererrorResponse := response.New()
 	validate := validator.New()
 	apiHandler := requestx.NewRequestHandler(fibererrorResponse, validate)
-	handler := example.NewHandler(useCase, apiHandler)
-	onRequest := middleware.NewOnRequestGuard(apiHandler)
-	router := example.NewRouter(handler, onRequest)
+	handler := health.NewHandler(useCase, apiHandler)
+	router := health.NewRouter(handler)
 	routers := api.NewRouters(router)
 	apiAPI := api.New(routers, fibererrorResponse)
 	appApp := app.NewApp(apiAPI)

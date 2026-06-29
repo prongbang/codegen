@@ -14,7 +14,7 @@ COPY . .
 RUN go mod download
 
 # With go ≥ 1.10
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/{{.ProjectName}} cmd/api/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/{{.Module}} cmd/api/main.go
 
 # small image
 FROM alpine:3.7
@@ -22,10 +22,10 @@ FROM alpine:3.7
 WORKDIR /app
 COPY --from=builder /go/src/{{.Module}}/configuration/production.yml /app/configuration/production.yml
 COPY --from=builder /go/src/{{.Module}}/policy /app/policy
-COPY --from=builder /go/bin/{{.ProjectName}} .
+COPY --from=builder /go/bin/{{.Module}} .
 
 ENV TZ=Asia/Bangkok
 RUN echo "Asia/Bangkok" > /etc/timezone
 
 # run binary.
-ENTRYPOINT ["/app/{{.ProjectName}}", "-env", "production"]
+ENTRYPOINT ["/app/{{.Module}}", "-env", "production"]
