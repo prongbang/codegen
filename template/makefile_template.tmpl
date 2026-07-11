@@ -1,6 +1,6 @@
-
-swaggen:
-	swag init -g cmd/api/main.go -o docs/apispec
+# required: go install github.com/prongbang/codegen@latest
+openapi-gen:
+	codegen openapi -framework fiber ./... > docs/openapi.json
 
 api-dev:
 	go run cmd/api/main.go -env development

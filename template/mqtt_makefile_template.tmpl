@@ -1,8 +1,5 @@
-run:
+api-dev:
 	go run cmd/api/main.go -env development
 
-build:
-	go build -o app cmd/api/main.go
-
-tidy:
-	go mod tidy
+api-prod:
+	go run cmd/api/main.go -env production
