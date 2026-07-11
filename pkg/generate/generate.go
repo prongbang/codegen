@@ -16,12 +16,15 @@ type generator struct {
 	FeatureGenerator Generator
 	SharedGenerator  Generator
 	OpenAPIGenerator Generator
+	MqttGenerator    Generator
 }
 
 func (f *generator) Generate(opt option.Options) error {
 	switch {
 	case opt.OpenAPI:
 		return f.OpenAPIGenerator.Generate(opt)
+	case opt.Template == "mqtt" && opt.Project != "" && opt.Module != "":
+		return f.MqttGenerator.Generate(opt)
 	case opt.Project != "" && opt.Module != "":
 		return f.ProjectGenerator.Generate(opt)
 	case opt.Package != "":
@@ -36,11 +39,12 @@ func (f *generator) Generate(opt option.Options) error {
 }
 
 // NewGenerator is new instance with func
-func NewGenerator(projectGenerator Generator, featureGenerator Generator, sharedGenerator Generator, openAPIGenerator Generator) Generator {
+func NewGenerator(projectGenerator Generator, featureGenerator Generator, sharedGenerator Generator, openAPIGenerator Generator, mqttGenerator Generator) Generator {
 	return &generator{
 		ProjectGenerator: projectGenerator,
 		FeatureGenerator: featureGenerator,
 		SharedGenerator:  sharedGenerator,
 		OpenAPIGenerator: openAPIGenerator,
+		MqttGenerator:    mqttGenerator,
 	}
 }

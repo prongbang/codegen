@@ -179,14 +179,24 @@ func TestGeneratorDispatchesByOption(t *testing.T) {
 	feature := &stubGenerator{}
 	shared := &stubGenerator{}
 	openAPI := &stubGenerator{}
-	gen := NewGenerator(project, feature, shared, openAPI)
+	mqtt := &stubGenerator{}
+	gen := NewGenerator(project, feature, shared, openAPI, mqtt)
 
 	if err := gen.Generate(option.Options{Project: "demo", Module: "github.com/acme/demo"}); err != nil {
 		t.Fatal(err)
 	}
-	if !project.called || feature.called || shared.called || openAPI.called {
-		t.Fatalf("unexpected dispatch: project=%v feature=%v shared=%v openapi=%v", project.called, feature.called, shared.called, openAPI.called)
+	if !project.called || feature.called || shared.called || openAPI.called || mqtt.called {
+		t.Fatalf("unexpected dispatch: project=%v feature=%v shared=%v openapi=%v mqtt=%v", project.called, feature.called, shared.called, openAPI.called, mqtt.called)
 	}
+
+	project.called = false
+	if err := gen.Generate(option.Options{Project: "demo", Module: "github.com/acme/demo", Template: "mqtt"}); err != nil {
+		t.Fatal(err)
+	}
+	if !mqtt.called || project.called {
+		t.Fatalf("expected mqtt generator to be called for template=mqtt: mqtt=%v project=%v", mqtt.called, project.called)
+	}
+	mqtt.called = false
 
 	project.called = false
 	if err := gen.Generate(option.Options{Package: "admin"}); err != nil {
@@ -222,7 +232,7 @@ func TestGeneratorDispatchesByOption(t *testing.T) {
 }
 
 func TestGeneratorReturnsUnsupportedError(t *testing.T) {
-	gen := NewGenerator(&stubGenerator{}, &stubGenerator{}, &stubGenerator{}, &stubGenerator{})
+	gen := NewGenerator(&stubGenerator{}, &stubGenerator{}, &stubGenerator{}, &stubGenerator{}, &stubGenerator{})
 	if err := gen.Generate(option.Options{}); err == nil {
 		t.Fatal("expected unsupported option error")
 	}

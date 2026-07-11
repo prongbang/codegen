@@ -319,6 +319,41 @@ var HealthRouterTemplate string
 //go:embed health_usecase_template.tmpl
 var HealthUseCaseTemplate string
 
+// MQTT
+
+//go:embed mqtt_mod_template.tmpl
+var MqttModTemplate string
+
+//go:embed mqtt_main_template.tmpl
+var MqttMainTemplate string
+
+//go:embed mqtt_makefile_template.tmpl
+var MqttMakefileTemplate string
+
+//go:embed mqtt_configuration_template.tmpl
+var MqttConfigurationTemplate string
+
+//go:embed mqtt_configuration_development_template.tmpl
+var MqttConfigurationDevelopmentTemplate string
+
+//go:embed mqtt_configuration_production_template.tmpl
+var MqttConfigurationProductionTemplate string
+
+//go:embed mqtt_broker_template.tmpl
+var MqttBrokerTemplate string
+
+//go:embed mqtt_subscribe_template.tmpl
+var MqttSubscribeTemplate string
+
+//go:embed mqtt_forward_template.tmpl
+var MqttForwardTemplate string
+
+//go:embed mqtt_forward_mqtt_template.tmpl
+var MqttForwardMqttTemplate string
+
+//go:embed mqtt_payload_template.tmpl
+var MqttPayloadTemplate string
+
 // RequestX
 
 //go:embed pkg_requestx_request_template.tmpl

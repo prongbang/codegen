@@ -1,0 +1,74 @@
+package main
+
+import (
+	"log"
+	"os"
+
+	paho "github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/mochi-mqtt/server/v2"
+	"github.com/mochi-mqtt/server/v2/hooks/auth"
+	"github.com/mochi-mqtt/server/v2/listeners"
+	"github.com/spf13/viper"
+	"github.com/urfave/cli/v2"
+
+	"{{.Module}}/configuration"
+	"{{.Module}}/internal/app/mqtt/broker"
+	"{{.Module}}/internal/app/mqtt/forward"
+	"{{.Module}}/internal/app/mqtt/subscribe"
+)
+
+func main() {
+	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "env",
+				Value: "",
+				Usage: "-env development/production",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			env := c.String("env")
+			if env == configuration.EnvProduction {
+				configuration.Load(env)
+			} else {
+				configuration.Load(configuration.EnvDevelopment)
+			}
+
+			// Local MQTT server used to forward messages downstream
+			server := mqtt.New(nil)
+			if err := server.AddHook(new(auth.AllowHook), nil); err != nil {
+				return err
+			}
+			tcp := listeners.NewTCP(listeners.Config{
+				ID:      "forward",
+				Address: viper.GetString("forward.address"),
+			})
+			if err := server.AddListener(tcp); err != nil {
+				return err
+			}
+			go func() {
+				if err := server.Serve(); err != nil {
+					log.Fatal(err)
+				}
+			}()
+
+			mqttForward := forward.NewMqtt(server)
+
+			// Connect to the upstream MQTT broker
+			connection := make(chan paho.Client)
+			go broker.New().Connect(connection)
+			mc := <-connection
+
+			// Subscribe to the upstream topic and forward messages
+			subscribe.New(mc, mqttForward).Do()
+
+			log.Println("[Mqtt] Forward service started")
+
+			// Block forever
+			select {}
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}

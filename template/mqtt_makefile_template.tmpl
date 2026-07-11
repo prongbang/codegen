@@ -1,0 +1,8 @@
+run:
+	go run cmd/api/main.go -env development
+
+build:
+	go build -o app cmd/api/main.go
+
+tidy:
+	go mod tidy

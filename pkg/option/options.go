@@ -14,6 +14,7 @@ type Options struct {
 	Driver    string
 	Orm       string
 	Framework string
+	Template  string
 	OpenAPI   bool
 	Patterns  []string
 }

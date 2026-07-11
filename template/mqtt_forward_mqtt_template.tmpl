@@ -1,0 +1,23 @@
+package forward
+
+import (
+	"fmt"
+	mqtt "github.com/mochi-mqtt/server/v2"
+)
+
+type mqttForward struct {
+	Server *mqtt.Server
+}
+
+func (m *mqttForward) Do(topic string, payload []byte) {
+	err := m.Server.Publish(topic, payload, false, 1)
+	if err != nil {
+		m.Server.Log.Error(fmt.Sprintf("publish %s failed", topic))
+	}
+}
+
+func NewMqtt(server *mqtt.Server) Forward {
+	return &mqttForward{
+		Server: server,
+	}
+}

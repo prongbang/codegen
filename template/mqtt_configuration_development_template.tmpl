@@ -1,0 +1,12 @@
+env: "development"
+
+mqtt:
+  host: "tcp://localhost:1883"
+  client_prefix: "{{.Name}}"
+  username: ""
+  password: ""
+  qos: 1
+  topic: "#"
+
+forward:
+  address: ":1884"

@@ -24,7 +24,7 @@
 
 Latest version:
 ```shell
-go install github.com/prongbang/codegen@v1.5.8
+go install github.com/prongbang/codegen@v1.6.0
 ```
 
 ## 🚀 Quick Start
@@ -35,7 +35,7 @@ Generate OpenAPI spec from a Fiber codebase:
 codegen openapi -framework fiber ./... > docs/openapi.json
 ```
 
-### 1. Create a New Project
+### 1. Create a New Project - API
 
 Generate a new project with module structure:
 
@@ -134,6 +134,50 @@ This creates the following structure:
 ├── wire.go
 └── wire_gen.go
 ```
+
+### Create a New Project - MQTT
+
+Generate a project from a predefined template using the `-template` (`-t`) flag:
+
+```shell
+codegen -new test_project -mod github.com/prongbang -template mqtt
+```
+
+Parameters:
+- `-new`: Project name
+- `-mod`: Module name
+- `-template`: Template name (currently supported: `mqtt`)
+
+The `mqtt` template scaffolds an MQTT forward service that subscribes to an
+upstream MQTT broker and forwards messages to a built-in (mochi) MQTT server:
+
+```
+.
+├── Makefile
+├── cmd
+│     └── api
+│         └── main.go
+├── configuration
+│     ├── configuration.go
+│     ├── development.yml
+│     ├── environment.go
+│     └── production.yml
+├── go.mod
+└── internal
+      └── app
+          └── mqtt
+              ├── broker
+              │     └── mqtt_broker.go
+              ├── forward
+              │     ├── forward.go
+              │     ├── mqtt_forward.go
+              │     └── payload.go
+              └── subscribe
+                    └── mqtt_subscribe.go
+```
+
+After generating, run `go mod tidy` inside the project, then start it with
+`make run` (or `go run cmd/api/main.go -env development`).
 
 ### 1.1 Initial gRPC
 

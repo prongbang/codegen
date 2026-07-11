@@ -1,0 +1,64 @@
+package broker
+
+import (
+	"crypto/tls"
+	"fmt"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/spf13/viper"
+	"log"
+	"time"
+)
+
+type MqttBroker interface {
+	Connect(connection chan mqtt.Client) mqtt.Client
+}
+
+type mqttBroker struct {
+}
+
+func (m *mqttBroker) Connect(connection chan mqtt.Client) mqtt.Client {
+	server := viper.GetString("mqtt.host")
+	clientId := fmt.Sprintf("%s-%d", viper.GetString("mqtt.client_prefix"), time.Now().Unix())
+	username := viper.GetString("mqtt.username")
+	password := viper.GetString("mqtt.password")
+
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(server)
+	opts.SetClientID(clientId)
+	opts.SetUsername(username)
+	opts.SetPassword(password)
+	opts.SetPingTimeout(10 * time.Second)
+	opts.SetKeepAlive(24 * time.Hour * 30)
+	opts.SetAutoReconnect(true)
+	opts.SetCleanSession(true)
+	opts.SetOrderMatters(true)
+	opts.SetMaxReconnectInterval(15 * time.Second)
+	opts.SetConnectRetry(true)
+	opts.SetConnectTimeout(60 * time.Second)
+	opts.SetResumeSubs(true)
+	opts.SetConnectionLostHandler(func(c mqtt.Client, err error) {
+		log.Println("[Mqtt] Connection lost error:", err.Error())
+	})
+	tlsConfig := &tls.Config{InsecureSkipVerify: true, ClientAuth: tls.NoClientCert}
+	opts.SetTLSConfig(tlsConfig)
+	opts.SetOnConnectHandler(func(c mqtt.Client) {
+		log.Println("[Mqtt] Client ID :", clientId, "-> Connected")
+		connection <- c
+	})
+	opts.SetReconnectingHandler(func(c mqtt.Client, options *mqtt.ClientOptions) {
+		log.Println("[Mqtt] Reconnecting")
+	})
+
+	client := mqtt.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		log.Println("[Mqtt] Error:", token.Error())
+		client = nil
+	} else {
+		log.Printf("[Mqtt] Connected to %s\n", server)
+	}
+	return client
+}
+
+func New() MqttBroker {
+	return &mqttBroker{}
+}

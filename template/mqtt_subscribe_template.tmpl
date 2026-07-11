@@ -1,0 +1,40 @@
+package subscribe
+
+import (
+	"fmt"
+	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/spf13/viper"
+	"{{.Module}}/internal/app/mqtt/forward"
+)
+
+type MQTTSubscriber interface {
+	Do()
+}
+
+type mqttSubscriber struct {
+	MC          mqtt.Client
+	MqttForward forward.Forward
+}
+
+func (m *mqttSubscriber) Do() {
+	qos := viper.GetInt("mqtt.qos")
+	topic := viper.GetString("mqtt.topic")
+
+	m.MC.Subscribe(topic, byte(qos), func(client mqtt.Client, msg mqtt.Message) {
+		println(fmt.Sprintf("received: %s [%s] %s", time.Now(), msg.Topic(), string(msg.Payload())))
+		// TODO: implement it
+		go func() { m.MqttForward.Do(msg.Topic(), msg.Payload()) }()
+	})
+}
+
+func New(
+	mc mqtt.Client,
+	mqttForward forward.Forward,
+) MQTTSubscriber {
+	return &mqttSubscriber{
+		MC:          mc,
+		MqttForward: mqttForward,
+	}
+}

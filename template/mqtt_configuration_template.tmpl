@@ -1,0 +1,40 @@
+package configuration
+
+import (
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
+	"log"
+)
+
+type configuration struct {
+	Env  string `mapstructure:"env"`
+	Mqtt struct {
+		Host         string `mapstructure:"host"`
+		ClientPrefix string `mapstructure:"client_prefix"`
+		Username     string `mapstructure:"username"`
+		Password     string `mapstructure:"password"`
+		Qos          int    `mapstructure:"qos"`
+		Topic        string `mapstructure:"topic"`
+	} `mapstructure:"mqtt"`
+	Forward struct {
+		Address string `mapstructure:"address"`
+	} `mapstructure:"forward"`
+}
+
+var Config configuration
+
+func Load(env string) {
+	viper.SetConfigName(env)
+	viper.AddConfigPath("configuration")
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Reading configuration file, %s", err)
+	}
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Println("Configuration file changed:", e.Name)
+	})
+	viper.WatchConfig()
+	err := viper.Unmarshal(&Config)
+	if err == nil {
+		log.Println("Configuration file has been loaded.")
+	}
+}

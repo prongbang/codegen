@@ -29,6 +29,7 @@ type Flags struct {
 	Driver      string
 	Orm         string
 	Framework   string
+	Template    string
 }
 
 func (f Flags) Project() string {
@@ -87,7 +88,8 @@ func newGenerator() generate.Generator {
 	featureGenerator := generate.NewFeatureGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, featureBinding)
 	sharedGenerator := generate.NewSharedGenerator(fileX, creatorX, installer, wireInstaller, wireRunner, sharedBinding)
 	openAPIGenerator := generate.NewOpenAPIGenerator()
-	return generate.NewGenerator(projectGenerator, featureGenerator, sharedGenerator, openAPIGenerator)
+	mqttGenerator := generate.NewMqttGenerator(fileX)
+	return generate.NewGenerator(projectGenerator, featureGenerator, sharedGenerator, openAPIGenerator, mqttGenerator)
 }
 
 func newApp() *cli.App {
@@ -227,17 +229,24 @@ func newApp() *cli.App {
 				Usage:       "-orm bun,sqlbuilder",
 				Destination: &flags.Orm,
 			},
+			&cli.StringFlag{
+				Name:        "template",
+				Aliases:     []string{"t"},
+				Usage:       "-template mqtt",
+				Destination: &flags.Template,
+			},
 		},
 		Action: func(*cli.Context) error {
 			opt := option.Options{
-				Project: flags.Project(),
-				Module:  flags.Module(),
-				Package: flags.Package(),
-				Feature: flags.Feature(),
-				Shared:  flags.Shared(),
-				Spec:    flags.Spec,
-				Driver:  flags.Driver,
-				Orm:     flags.Orm,
+				Project:  flags.Project(),
+				Module:   flags.Module(),
+				Package:  flags.Package(),
+				Feature:  flags.Feature(),
+				Shared:   flags.Shared(),
+				Spec:     flags.Spec,
+				Driver:   flags.Driver,
+				Orm:      flags.Orm,
+				Template: flags.Template,
 			}
 			return newGenerator().Generate(opt)
 		},
