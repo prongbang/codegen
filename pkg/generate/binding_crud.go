@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/prongbang/codegen/pkg/option"
+	"github.com/pterm/pterm"
 )
 
 // ensureCrudWireProviders binds the providers required by generated CRUD code
@@ -23,9 +24,13 @@ func ensureCrudWireProviders(wireText string, pkg option.Package, withOnRequest 
 			return fmt.Sprintf(`database.NewDB,
 		%s`, marker)
 		})
+		pterm.Info.Println("Added database.NewDB to wire.go (required by the CRUD datasource)")
 	}
 
-	if withOnRequest {
+	// Skip when any middleware provider is already bound (e.g. the project
+	// binds middleware.NewOnRequest with its own options); adding another
+	// provider for middleware.OnRequest would make wire fail.
+	if withOnRequest && !strings.Contains(wireText, "middleware.New") {
 		middlewareImport := fmt.Sprintf(`"%s/internal/middleware"`, pkg.Module.Module)
 		if !strings.Contains(wireText, middlewareImport) {
 			wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
@@ -33,12 +38,11 @@ func ensureCrudWireProviders(wireText string, pkg option.Package, withOnRequest 
 	%s`, middlewareImport, marker)
 			})
 		}
-		if !strings.Contains(wireText, "middleware.NewOnRequestGuard") {
-			wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
-				return fmt.Sprintf(`middleware.NewOnRequestGuard,
+		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
+			return fmt.Sprintf(`middleware.NewOnRequest,
 		%s`, marker)
-			})
-		}
+		})
+		pterm.Info.Println("Added middleware.NewOnRequest to wire.go (required by the CRUD router); replace it with middleware.NewOnRequest to enable real audit/permission handling")
 	}
 
 	return wireText
