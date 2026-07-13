@@ -42,8 +42,8 @@ func sharedCrudTemplates(pkg option.Package) map[string][]byte {
 		repoTmpl = template.CrudRepositoryBunTemplate
 	}
 
-	dsTmpl, _ := template.RenderText(dataSourceTmpl, template.Project{Name: pkg.Name, Alias: pkg.Spec.Alias, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module, Path: appPath, Driver: pkg.Spec.Driver})
-	mdTmpl, _ := template.RenderText(modelTmpl, template.Project{Imports: pkg.Spec.Imports, Module: pkg.Module.Module, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Name: pkg.Name})
+	dsTmpl, _ := template.RenderText(dataSourceTmpl, template.Project{Name: pkg.Name, Alias: pkg.Spec.Alias, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module, Path: appPath, Driver: pkg.Spec.Driver, Table: pkg.Spec.Table})
+	mdTmpl, _ := template.RenderText(modelTmpl, template.Project{Imports: pkg.Spec.Imports, Module: pkg.Module.Module, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Name: pkg.Name, Table: pkg.Spec.Table})
 	rpTmpl, _ := template.RenderText(repoTmpl, template.Project{Name: pkg.Name, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module})
 	pdTmpl, _ := template.RenderText(template.CrudSharedProviderTemplate, template.Project{Name: pkg.Name})
 
@@ -66,14 +66,14 @@ type sharedGenerator struct {
 
 func (f *sharedGenerator) Generate(opt option.Options) error {
 	opt.Feature = opt.Shared
-	if opt.Driver != "" {
+	if opt.Driver != "" || opt.Dsn != "" {
 		return f.generateSharedCrud(opt)
 	}
 	return f.generateSharedPrototype(opt)
 }
 
 func (f *sharedGenerator) generateSharedCrud(opt option.Options) error {
-	spec, err := generateSpec(f.FileX, opt)
+	spec, err := loadSpec(f.FileX, opt)
 	if err != nil {
 		return err
 	}

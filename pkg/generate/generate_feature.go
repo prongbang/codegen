@@ -79,10 +79,10 @@ func featureCrudTemplates(pkg option.Package) map[string][]byte {
 	}
 
 	// Render
-	dsTmpl, _ := template.RenderText(dataSourceTmpl, template.Project{Name: pkg.Name, Alias: pkg.Spec.Alias, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module, Path: appPath, Driver: pkg.Spec.Driver})
+	dsTmpl, _ := template.RenderText(dataSourceTmpl, template.Project{Name: pkg.Name, Alias: pkg.Spec.Alias, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module, Path: appPath, Driver: pkg.Spec.Driver, Table: pkg.Spec.Table})
 	rpTmpl, _ := template.RenderText(repoTmpl, template.Project{Name: pkg.Name, PrimaryField: pkg.Spec.PrimaryField, Module: pkg.Module.Module})
 	ucTmpl, _ := template.RenderText(usecaseTmpl, template.Project{Name: pkg.Name, Module: pkg.Module.Module, Fields: pkg.Spec.Fields})
-	mdTmpl, _ := template.RenderText(modelTmpl, template.Project{Imports: pkg.Spec.Imports, Module: pkg.Module.Module, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Name: pkg.Name})
+	mdTmpl, _ := template.RenderText(modelTmpl, template.Project{Imports: pkg.Spec.Imports, Module: pkg.Module.Module, Fields: pkg.Spec.Fields, PrimaryField: pkg.Spec.PrimaryField, Name: pkg.Name, Table: pkg.Spec.Table})
 	rtTmpl, _ := template.RenderText(routeTmpl, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
 	hdTmpl, _ := template.RenderText(template.CrudHandlerTemplate, template.Project{Name: pkg.Name, Module: pkg.Module.Module})
 	pdTmpl, _ := template.RenderText(template.CrudProviderTemplate, template.Project{Name: pkg.Name})
@@ -113,7 +113,7 @@ func (f *featureGenerator) Generate(opt option.Options) error {
 	if opt.Package != "" {
 		return f.generatePackagePrototype(opt)
 	}
-	if opt.Driver != "" {
+	if opt.Driver != "" || opt.Dsn != "" {
 		return f.generateFeatureCrud(opt)
 	}
 	return f.generateFeaturePrototype(opt)
@@ -140,7 +140,7 @@ func (f *featureGenerator) generateFeaturePrototype(opt option.Options) error {
 }
 
 func (f *featureGenerator) generateFeatureCrud(opt option.Options) error {
-	spec, err := generateSpec(f.FileX, opt)
+	spec, err := loadSpec(f.FileX, opt)
 	if err != nil {
 		return err
 	}
@@ -160,6 +160,13 @@ func (f *featureGenerator) generateFeatureCrud(opt option.Options) error {
 		return f.WireRunner.Run()
 	}
 	return nil
+}
+
+func loadSpec(fileX filex.FileX, opt option.Options) (option.Spec, error) {
+	if opt.Dsn != "" {
+		return generateSpecFromDatabase(opt)
+	}
+	return generateSpec(fileX, opt)
 }
 
 func generateSpec(fileX filex.FileX, opt option.Options) (option.Spec, error) {

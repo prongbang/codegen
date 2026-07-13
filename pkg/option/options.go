@@ -11,6 +11,8 @@ type Options struct {
 	Feature   string
 	Shared    string
 	Spec      string
+	Dsn       string
+	Table     string
 	Driver    string
 	Orm       string
 	Framework string
@@ -24,6 +26,7 @@ type Spec struct {
 	Driver       string
 	Orm          string
 	Alias        string
+	Table        string
 	Fields       []template.Field
 	PrimaryField template.PrimaryField
 }

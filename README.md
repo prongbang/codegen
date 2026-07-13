@@ -15,6 +15,7 @@
 - 🔌 **Fiber Framework Support** - Optimized for the Fiber web framework
 - 🌐 **gRPC Support** - Built-in support for gRPC services
 - 🔄 **CRUD Generation** - Generate CRUD operations from JSON specifications
+- 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
 - 🛠️ **Open API Generation** - Generate Open API without configuration
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
@@ -26,6 +27,22 @@ Latest version:
 ```shell
 go install github.com/prongbang/codegen@v1.6.1
 ```
+
+## 🚩 CLI Flags
+
+| Flag | Alias | Description |
+|---|---|---|
+| `-new` | `-n` | Project name (create a new project) |
+| `-mod` | `-m` | Module name, e.g. `github.com/prongbang` |
+| `-template` | `-t` | Project template (currently supported: `mqtt`) |
+| `-feature` | `-f` | Feature name (generate a feature module) |
+| `-shared` | `-sh` | Shared module name |
+| `-package` | `-p` | Package prototype name |
+| `-spec` | `-s` | JSON spec file for CRUD generation |
+| `-dsn` | | Database connection string — generate CRUD from a live database schema |
+| `-table` | `-tb` | Table name (optional, defaults to the feature name) |
+| `-driver` | `-d` | Database driver, e.g. `mariadb`, `mysql` |
+| `-orm` | | ORM for generated data source: `bun` or `sqlbuilder` |
 
 ## 🚀 Quick Start
 
@@ -246,10 +263,10 @@ make gen service=device version=v1 thirdparty=core
 
 ### 2. Generate Features Prototype
 
-Generate a new feature module:
+Generate a new feature module (run inside `internal/app/api` of your project):
 
 ```shell
-codegen -f user
+codegen -f promotion
 ```
 
 This creates:
@@ -265,11 +282,11 @@ test-project/internal/app/api/promotion
 └── usecase.go
 ```
 
-### 3. Generate Features CRUD and Swagger
+### 3. Generate Features CRUD and Swagger from JSON Spec
 
 Generate CRUD operations from JSON specifications:
 
-### 1. Define Spec File
+#### 3.1 Define Spec File
 
 Create `spec/auth.json`:
 ```json
@@ -280,7 +297,7 @@ Create `spec/auth.json`:
 }
 ```
 
-### 2. Generate CRUD
+#### 3.2 Generate CRUD
 
 - SQL Builder
 
@@ -297,18 +314,76 @@ codegen -f auth -s spec/auth.json -d mariadb -orm bun
 This generates complete CRUD operations based on your JSON structure.
 
 ```
-test-project/internal/app/api/promotion
+test-project/internal/app/api/auth
+├── auth.go
 ├── datasource.go
 ├── handler.go
 ├── permission.go
-├── promotion.go
 ├── provider.go
 ├── repository.go
 ├── router.go
 └── usecase.go
 ```
 
-### 4. Generate Shared Prototype
+### 4. Generate Features CRUD from Database Schema
+
+Instead of writing a JSON spec, point codegen at a live MySQL/MariaDB database
+with `-dsn` and it reads the table schema from `information_schema` to generate
+the model and CRUD code:
+
+```shell
+codegen -f brand -dsn "user:password@tcp(127.0.0.1:3306)/dbname" -orm bun
+```
+
+By default the table name is the snake_case of the feature name. If the table
+name differs, override it with `-table`:
+
+```shell
+codegen -f company -dsn "user:password@tcp(127.0.0.1:3306)/dbname" -table company_group -orm bun
+```
+
+Parameters:
+- `-dsn`: Database connection string in [go-sql-driver DSN format](https://github.com/go-sql-driver/mysql#dsn-data-source-name)
+- `-table` (`-tb`): Table name (optional, defaults to the feature name)
+- `-orm`: `bun` or `sqlbuilder`
+- `-d`: Driver (optional, defaults to `mysql` when `-dsn` is set)
+
+Column types are mapped automatically:
+
+| MySQL type | Go type |
+|---|---|
+| `int`, `bigint`, `smallint`, `tinyint`, `year`, `bit` | `int64` |
+| `tinyint(1)`, `boolean` | `*bool` |
+| `decimal`, `float`, `double` | `float64` |
+| `date`, `datetime`, `timestamp`, `time` | `*time.Time` |
+| `varchar`, `text`, `enum`, `json`, others | `string` |
+
+The primary key is detected from the table's `PRIMARY KEY` definition, and
+column names are used as-is for the generated SQL and `db`/`bun` tags. For
+example, a `brand` table generates:
+
+```go
+type Brand struct {
+    bun.BaseModel `bun:"table:brand,alias:b" json:"-" swaggerignore:"true"`
+    Id        string     `bun:"id,pk" json:"id" db:"id"`
+    Name      string     `bun:"name" json:"name" db:"name"`
+    Active    int64      `bun:"active" json:"active" db:"active"`
+    CreatedAt *time.Time `bun:"created_at" json:"createdAt" db:"created_at"`
+    UpdatedAt *time.Time `bun:"updated_at" json:"updatedAt" db:"updated_at"`
+}
+```
+
+This also works for shared modules with `-sh`:
+
+```shell
+codegen -sh brand -dsn "user:password@tcp(127.0.0.1:3306)/dbname" -orm bun
+```
+
+> [!NOTE]
+> The DSN is only used at generation time to read the schema — it is never
+> written into the generated code.
+
+### 5. Generate Shared Prototype
 
 ```shell
 codegen -sh promotion
@@ -323,21 +398,27 @@ test-project/internal/shared/promotion
 └── repository.go
 ```
 
-### 5. Generate Shared CRUD
+### 6. Generate Shared CRUD
 
 - SQL Builder
 
 ```shell
-codegen -sh promotion -s spec/promotion.json -d maridb -orm sqlbuilder
+codegen -sh promotion -s spec/promotion.json -d mariadb -orm sqlbuilder
 ```
 
 - Bun
 
 ```shell
-codegen -sh promotion -s spec/promotion.json -d maridb -orm bun
+codegen -sh promotion -s spec/promotion.json -d mariadb -orm bun
 ```
 
-This generates shared CRUD operations based on your JSON structure.
+- From a database schema
+
+```shell
+codegen -sh promotion -dsn "user:password@tcp(127.0.0.1:3306)/dbname" -orm bun
+```
+
+This generates shared CRUD operations based on your JSON structure or database schema.
 
 ```
 test-project/internal/shared/promotion

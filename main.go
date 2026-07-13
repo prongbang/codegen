@@ -13,6 +13,7 @@ import (
 	"github.com/ettle/strcase"
 	"github.com/prongbang/codegen/pkg/arch"
 	"github.com/prongbang/codegen/pkg/command"
+	"github.com/prongbang/codegen/pkg/dbdriver"
 	"github.com/prongbang/codegen/pkg/option"
 	"github.com/prongbang/codegen/pkg/tools"
 	"github.com/urfave/cli/v2"
@@ -26,6 +27,8 @@ type Flags struct {
 	SharedName  string
 	Crud        string
 	Spec        string
+	Dsn         string
+	Table       string
 	Driver      string
 	Orm         string
 	Framework   string
@@ -219,6 +222,17 @@ func newApp() *cli.App {
 				Destination: &flags.Spec,
 			},
 			&cli.StringFlag{
+				Name:        "dsn",
+				Usage:       `-dsn "user:password@tcp(127.0.0.1:3306)/dbname" (generate CRUD from database schema)`,
+				Destination: &flags.Dsn,
+			},
+			&cli.StringFlag{
+				Name:        "table",
+				Aliases:     []string{"tb"},
+				Usage:       "-table users (table name, defaults to feature name)",
+				Destination: &flags.Table,
+			},
+			&cli.StringFlag{
 				Name:        "driver",
 				Aliases:     []string{"d"},
 				Usage:       "-d mariadb",
@@ -237,6 +251,10 @@ func newApp() *cli.App {
 			},
 		},
 		Action: func(*cli.Context) error {
+			driver := flags.Driver
+			if driver == "" && flags.Dsn != "" {
+				driver = dbdriver.DriverMysql
+			}
 			opt := option.Options{
 				Project:  flags.Project(),
 				Module:   flags.Module(),
@@ -244,7 +262,9 @@ func newApp() *cli.App {
 				Feature:  flags.Feature(),
 				Shared:   flags.Shared(),
 				Spec:     flags.Spec,
-				Driver:   flags.Driver,
+				Dsn:      flags.Dsn,
+				Table:    flags.Table,
+				Driver:   driver,
 				Orm:      flags.Orm,
 				Template: flags.Template,
 			}

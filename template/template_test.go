@@ -39,6 +39,14 @@ func TestProjectHelpers(t *testing.T) {
 	if p.ThirdPartyName() != "core_service" {
 		t.Fatalf("unexpected thirdparty name: %s", p.ThirdPartyName())
 	}
+	p.Table = "hello_worlds"
+	if p.TableName() != "hello_worlds" {
+		t.Fatalf("unexpected table override: %s", p.TableName())
+	}
+	p.Driver = "mysql"
+	if p.DriverName() != "GetMariaDB" {
+		t.Fatalf("unexpected mysql driver name: %s", p.DriverName())
+	}
 }
 
 func TestRenderTextSupportsTemplateFuncs(t *testing.T) {

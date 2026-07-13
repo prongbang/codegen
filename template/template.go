@@ -442,10 +442,11 @@ type Project struct {
 	SortFields   map[string]string
 	PrimaryField PrimaryField
 	Driver       string
+	Table        string
 }
 
 func (w Project) DriverName() string {
-	if w.Driver == "mariadb" {
+	if w.Driver == "mariadb" || w.Driver == "mysql" {
 		return "GetMariaDB"
 	}
 	return "GetUnknownDB"
@@ -476,6 +477,9 @@ func (w Project) TagsName() string {
 }
 
 func (w Project) TableName() string {
+	if w.Table != "" {
+		return w.Table
+	}
 	return strcase.ToSnake(w.Name)
 }
 
