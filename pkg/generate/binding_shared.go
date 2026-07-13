@@ -2,6 +2,7 @@ package generate
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prongbang/codegen/pkg/common"
 	"github.com/prongbang/codegen/pkg/config"
@@ -42,19 +43,27 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 
 	wireB := b.FileX.ReadFile(wirePath)
 	wireText := wireB
-	wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`shared%s "%s/%s/shared/%s"
-	%s`, common.ToLower(pkg.Name), pkg.Module.Module, appPath, common.ToLower(pkg.Name), marker,
-		)
-	})
+	sharedImport := fmt.Sprintf(`shared%s "%s/%s/shared/%s"`, common.ToLower(pkg.Name), pkg.Module.Module, appPath, common.ToLower(pkg.Name))
+	if !strings.Contains(wireText, sharedImport) {
+		wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+	%s`, sharedImport, marker,
+			)
+		})
+	}
 
-	wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`shared%s.ProviderSet,
-		%s`, common.ToLower(pkg.Name), marker,
-		)
-	})
+	sharedProvider := fmt.Sprintf(`shared%s.ProviderSet,`, common.ToLower(pkg.Name))
+	if !strings.Contains(wireText, sharedProvider) {
+		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+		%s`, sharedProvider, marker,
+			)
+		})
+	}
+
+	wireText = ensureCrudWireProviders(wireText, pkg, false)
 
 	spinnerBindWire, _ := pterm.DefaultSpinner.Start("Binding file wire.go")
 	if err := b.FileX.WriteFile(wirePath, []byte(wireText)); err == nil {

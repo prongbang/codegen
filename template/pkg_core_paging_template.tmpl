@@ -6,8 +6,8 @@ import (
 
 const PagingLimitDefault = 20
 
-type Paging struct {
-	List interface{} `json:"list"`
+type Paging[T any] struct {
+	List T `json:"list"`
 	PageInfo
 }
 
@@ -49,7 +49,7 @@ func GetPageResult(pageNo int64, limitNo int64, total int64) *PageInfo {
 	}
 }
 
-func Pagination(pageNo int64, limitNo int64, getCount func() int64, getData func(limit int64, offset int64) interface{}) Paging {
+func Pagination[T any](pageNo int64, limitNo int64, getCount func() int64, getData func(limit int64, offset int64) T) Paging[T] {
 	total := getCount()
 	var pageCount = math.Ceil(float64(total) / float64(limitNo))
 	pageCountInt := int64(pageCount)
@@ -62,7 +62,7 @@ func Pagination(pageNo int64, limitNo int64, getCount func() int64, getData func
 
 	data := getData(limitNo, offset)
 
-	return Paging{
+	return Paging[T]{
 		List: data,
 		PageInfo: PageInfo{
 			Page:  pageNo,

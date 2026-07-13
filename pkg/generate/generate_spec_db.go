@@ -47,7 +47,11 @@ func specFromColumns(opt option.Options, table string, columns []dbschema.Column
 			imports = append(imports, "time")
 		}
 
-		fields = append(fields, template.Field{PrimaryKey: col.PrimaryKey, Alias: alias, CamelCase: camelTag, SnakeCase: snakeTag, PascalCase: vars, Name: vars, Type: typeValue, JsonTag: camelTag, DbTag: col.Name, Update: true, Create: true})
+		// Audit fields are set from UserRequestInfo by the usecase template,
+		// so exclude them from the create/update copy loops.
+		isAudit := vars == "CreatedBy" || vars == "UpdatedBy"
+
+		fields = append(fields, template.Field{PrimaryKey: col.PrimaryKey, Alias: alias, CamelCase: camelTag, SnakeCase: snakeTag, PascalCase: vars, Name: vars, Type: typeValue, JsonTag: camelTag, DbTag: col.Name, Update: !isAudit, Create: !isAudit})
 
 		if col.PrimaryKey && spec.PrimaryField.Name == "" {
 			spec.PrimaryField = template.PrimaryField{

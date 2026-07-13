@@ -207,8 +207,10 @@ func generateSpec(fileX filex.FileX, opt option.Options) (option.Spec, error) {
 			}
 		}
 
-		// Fields
-		fields = append(fields, template.Field{PrimaryKey: isPrimaryKey, Alias: alias, CamelCase: camelTag, SnakeCase: snakeTag, PascalCase: vars, Name: vars, Type: typeValue, JsonTag: camelTag, DbTag: snakeTag, Update: true, Create: true})
+		// Fields: audit fields are set from UserRequestInfo by the usecase
+		// template, so exclude them from the create/update copy loops.
+		isAudit := vars == "CreatedBy" || vars == "UpdatedBy"
+		fields = append(fields, template.Field{PrimaryKey: isPrimaryKey, Alias: alias, CamelCase: camelTag, SnakeCase: snakeTag, PascalCase: vars, Name: vars, Type: typeValue, JsonTag: camelTag, DbTag: snakeTag, Update: !isAudit, Create: !isAudit})
 
 		// Pk
 		if isPrimaryKey {

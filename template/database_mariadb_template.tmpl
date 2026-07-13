@@ -2,6 +2,8 @@ package database
 
 import (
 	"github.com/dreamph/dbre"
+	// Register the mysql driver for database/sql used by bundriver
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/innotechdevops/bun-driver/pkg/bundriver"
 	"{{.Module}}/configuration"
 	"time"

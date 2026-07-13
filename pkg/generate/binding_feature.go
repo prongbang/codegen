@@ -2,6 +2,7 @@ package generate
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ettle/strcase"
 	"github.com/prongbang/codegen/pkg/common"
@@ -41,19 +42,27 @@ func (b *bindingFeature) Bind(pkg option.Package) error {
 
 	wireB := b.FileX.ReadFile(wirePath)
 	wireText := wireB
-	wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`"%s/%s/api/%s"
-	%s`, pkg.Module.Module, pkg.Module.AppPath, common.ToLower(pkg.Name), marker,
-		)
-	})
+	featureImport := fmt.Sprintf(`"%s/%s/api/%s"`, pkg.Module.Module, pkg.Module.AppPath, common.ToLower(pkg.Name))
+	if !strings.Contains(wireText, featureImport) {
+		wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+	%s`, featureImport, marker,
+			)
+		})
+	}
 
-	wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`%s.ProviderSet,
-		%s`, common.ToLower(pkg.Name), marker,
-		)
-	})
+	featureProvider := fmt.Sprintf(`%s.ProviderSet,`, common.ToLower(pkg.Name))
+	if !strings.Contains(wireText, featureProvider) {
+		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+		%s`, featureProvider, marker,
+			)
+		})
+	}
+
+	wireText = ensureCrudWireProviders(wireText, pkg, true)
 
 	spinnerBindWire, _ := pterm.DefaultSpinner.Start("Binding file wire.go")
 	if err := b.FileX.WriteFile(wirePath, []byte(wireText)); err == nil {
@@ -68,40 +77,47 @@ func (b *bindingFeature) Bind(pkg option.Package) error {
 	routerPath := "/" + pwd + "/routers.go"
 	routerB := b.FileX.ReadFile(routerPath)
 	routerText := routerB
-	routerText = replaceFirstMarker(routerText, routerImportMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`"%s/%s/api/%s"
-	%s`, pkg.Module.Module, pkg.Module.AppPath, common.ToLower(pkg.Name), marker,
-		)
-	})
+	if !strings.Contains(routerText, featureImport) {
+		routerText = replaceFirstMarker(routerText, routerImportMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+	%s`, featureImport, marker,
+			)
+		})
+	}
 
-	routerText = replaceFirstMarker(routerText, routerStructMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`%sRoute %s.Router
+	// Skip the router bindings when this feature was already bound
+	// (re-generating an existing feature must not duplicate them).
+	routeInitial := fmt.Sprintf("r.%sRoute.Initial(app)", common.UpperCamelName(pkg.Name))
+	if !strings.Contains(routerText, routeInitial) {
+		routerText = replaceFirstMarker(routerText, routerStructMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%sRoute %s.Router
 	%s`, common.UpperCamelName(pkg.Name), common.ToLower(pkg.Name), marker,
-		)
-	})
+			)
+		})
 
-	routerText = replaceFirstMarker(routerText, routerInitialsMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`r.%sRoute.Initial(app)
-	%s`, common.UpperCamelName(pkg.Name), marker,
-		)
-	})
+		routerText = replaceFirstMarker(routerText, routerInitialsMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%s
+	%s`, routeInitial, marker,
+			)
+		})
 
-	routerText = replaceFirstMarker(routerText, routerNewMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`	%sRoute %s.Router,
+		routerText = replaceFirstMarker(routerText, routerNewMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`	%sRoute %s.Router,
 	%s`, strcase.ToCamel(pkg.Name), common.ToLower(pkg.Name), marker,
-		)
-	})
+			)
+		})
 
-	routerText = replaceFirstMarker(routerText, routerReturnMarkers(), func(marker string) string {
-		return fmt.Sprintf(
-			`%sRoute: %sRoute,
+		routerText = replaceFirstMarker(routerText, routerReturnMarkers(), func(marker string) string {
+			return fmt.Sprintf(
+				`%sRoute: %sRoute,
 		%s`, common.UpperCamelName(pkg.Name), strcase.ToCamel(pkg.Name), marker,
-		)
-	})
+			)
+		})
+	}
 
 	spinnerBindRouter, _ := pterm.DefaultSpinner.Start("Binding file routers.go")
 	if err := b.FileX.WriteFile(routerPath, []byte(routerText)); err == nil {

@@ -14,6 +14,7 @@ func TestSpecFromColumns(t *testing.T) {
 		{Name: "email", DataType: "varchar", ColumnType: "varchar(255)"},
 		{Name: "is_active", DataType: "tinyint", ColumnType: "tinyint(1)", Nullable: true},
 		{Name: "created_at", DataType: "datetime", ColumnType: "datetime", Nullable: true},
+		{Name: "created_by", DataType: "varchar", ColumnType: "varchar(50)", Nullable: true},
 	}
 
 	spec := specFromColumns(opt, "users", columns)
@@ -24,8 +25,8 @@ func TestSpecFromColumns(t *testing.T) {
 	if spec.Driver != "mysql" || spec.Orm != "bun" {
 		t.Fatalf("unexpected driver/orm: %s/%s", spec.Driver, spec.Orm)
 	}
-	if len(spec.Fields) != 4 {
-		t.Fatalf("expected 4 fields, got %d", len(spec.Fields))
+	if len(spec.Fields) != 5 {
+		t.Fatalf("expected 5 fields, got %d", len(spec.Fields))
 	}
 	if spec.PrimaryField.Name != "Id" || spec.PrimaryField.Type != "int64" || spec.PrimaryField.JsonTag != "id" {
 		t.Fatalf("unexpected primary field: %+v", spec.PrimaryField)
@@ -54,6 +55,15 @@ func TestSpecFromColumns(t *testing.T) {
 	}
 	if spec.Fields[3].JsonTag != "createdAt" {
 		t.Fatalf("expected json tag createdAt, got %s", spec.Fields[3].JsonTag)
+	}
+
+	// Audit fields must be excluded from create/update copy loops
+	// (the usecase template sets them from UserRequestInfo).
+	if spec.Fields[4].Name != "CreatedBy" || spec.Fields[4].Update || spec.Fields[4].Create {
+		t.Fatalf("expected CreatedBy with Update/Create=false, got %+v", spec.Fields[4])
+	}
+	if !spec.Fields[3].Update || !spec.Fields[3].Create {
+		t.Fatalf("expected CreatedAt to keep Update/Create=true, got %+v", spec.Fields[3])
 	}
 }
 
