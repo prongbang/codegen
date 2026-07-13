@@ -40,9 +40,10 @@ func ensureCrudWireProviders(wireText string, pkg option.Package, withOnRequest 
 		}
 		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
 			return fmt.Sprintf(`middleware.NewOnRequest,
+		middleware.NewOnRequestOptions,
 		%s`, marker)
 		})
-		pterm.Info.Println("Added middleware.NewOnRequest to wire.go (required by the CRUD router); replace it with middleware.NewOnRequest to enable real audit/permission handling")
+		pterm.Info.Println("Added middleware.NewOnRequest and middleware.NewOnRequestOptions to wire.go (required by the CRUD router); customize OnRequestOptions to enable audit/permission handling")
 	}
 
 	return wireText

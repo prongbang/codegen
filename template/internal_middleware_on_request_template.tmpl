@@ -90,7 +90,11 @@ func (p *onRequest) SetPermissionId(c *fiber.Ctx, permissionId string) {
 }
 
 func NewOnRequestGuard(apiHandler requestx.ApiHandler) OnRequest {
-	return NewOnRequest(apiHandler, &OnRequestOptions{
+	return NewOnRequest(apiHandler, NewOnRequestOptions())
+}
+
+func NewOnRequestOptions() *OnRequestOptions {
+	return &OnRequestOptions{
 		HandleAuditLog: func(c *fiber.Ctx, permissionId string, userRequestInfo *core.UserRequestInfo) error {
 			// TODO implementation
 			return nil
@@ -99,5 +103,5 @@ func NewOnRequestGuard(apiHandler requestx.ApiHandler) OnRequest {
 			// TODO implementation
 			return nil
 		},
-	})
+	}
 }
