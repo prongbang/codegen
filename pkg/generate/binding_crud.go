@@ -8,12 +8,14 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// ensureCrudWireProviders binds the providers required by generated CRUD code
-// to wire.go if they are not already bound: database.NewDB provides
-// dbre.AppIDB for datasources, and middleware.NewOnRequestGuard provides
-// middleware.OnRequest for feature routers. Only applied when the package was
-// generated from a spec (CRUD); prototype packages do not need them, and wire
-// fails on unused providers.
+// ensureCrudWireProviders binds database.NewDB (provides dbre.AppIDB for
+// generated datasources) to wire.go if it is not already bound. Only applied
+// when the package was generated from a spec (CRUD); prototype packages do
+// not need it, and wire fails on unused providers.
+//
+// The middleware.OnRequest dependency required by feature routers is NOT
+// bound automatically — projects provide their own (e.g. middleware.NewOnRequest
+// or middleware.NewOnRequestGuard); a hint is printed when none is found.
 func ensureCrudWireProviders(wireText string, pkg option.Package, withOnRequest bool) string {
 	if len(pkg.Spec.Fields) == 0 {
 		return wireText
@@ -27,23 +29,8 @@ func ensureCrudWireProviders(wireText string, pkg option.Package, withOnRequest 
 		pterm.Info.Println("Added database.NewDB to wire.go (required by the CRUD datasource)")
 	}
 
-	// Skip when any middleware provider is already bound (e.g. the project
-	// binds middleware.NewOnRequest with its own options); adding another
-	// provider for middleware.OnRequest would make wire fail.
 	if withOnRequest && !strings.Contains(wireText, "middleware.New") {
-		middlewareImport := fmt.Sprintf(`"%s/internal/middleware"`, pkg.Module.Module)
-		if !strings.Contains(wireText, middlewareImport) {
-			wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
-				return fmt.Sprintf(`%s
-	%s`, middlewareImport, marker)
-			})
-		}
-		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
-			return fmt.Sprintf(`middleware.NewOnRequest,
-		middleware.NewOnRequestOptions,
-		%s`, marker)
-		})
-		pterm.Info.Println("Added middleware.NewOnRequest and middleware.NewOnRequestOptions to wire.go (required by the CRUD router); customize OnRequestOptions to enable audit/permission handling")
+		pterm.Warning.Println("wire.go has no provider for middleware.OnRequest (required by the CRUD router); add e.g. middleware.NewOnRequestGuard to wire.Build")
 	}
 
 	return wireText
