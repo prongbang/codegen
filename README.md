@@ -16,6 +16,8 @@
 - 🌐 **gRPC Support** - Built-in support for gRPC services
 - 🔄 **CRUD Generation** - Generate CRUD operations from JSON specifications
 - 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
+- 🔌 **Optional Database** - Projects are generated without database code unless you ask for it; MariaDB, MongoDB and InfluxDB 3 can be added at any time
+- 📡 **MQTT Template** - Scaffold an MQTT forward service instead of a REST API
 - 🛠️ **Open API Generation** - Generate Open API without configuration
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
@@ -41,12 +43,53 @@ go install github.com/prongbang/codegen@v1.6.1
 | `-spec` | `-s` | JSON spec file for CRUD generation |
 | `-dsn` | | Database connection string — generate CRUD from a live database schema |
 | `-table` | `-tb` | Table name (optional, defaults to the feature name) |
-| `-driver` | `-d` | Database driver, e.g. `mariadb`, `mysql` |
+| `-driver` | `-d` | See below — the meaning depends on what you are generating |
 | `-orm` | | ORM for generated data source: `bun` or `sqlbuilder` |
+
+`-driver` does two different jobs:
+
+| Used with | Meaning | Example |
+|---|---|---|
+| `-new` | Which databases to scaffold. Comma-separated. **Omit it for a project with no database code.** | `-d mariadb,influxdb3` |
+| `-f` / `-sh` | Which database the generated CRUD data source targets | `-d mariadb` |
+
+## 🧭 Commands
+
+| Command | Description |
+|---|---|
+| `codegen -new <name> -mod <module>` | Create a new project |
+| `codegen database init -d <databases>` | Add database code to an existing project |
+| `codegen grpc init` | Add the gRPC scaffold |
+| `codegen grpc server --new <service>` | Generate a gRPC server |
+| `codegen grpc client --new <thirdparty>/<service>` | Generate a gRPC client |
+| `codegen openapi -framework fiber ./...` | Print an OpenAPI spec for the current project |
+
+Run `codegen <command> --help` for the flags of any command.
 
 ## 🚀 Quick Start
 
-Generate OpenAPI spec from a Fiber codebase:
+A typical run, from nothing to a working CRUD endpoint:
+
+```shell
+# 1. Create the project (add -d here if you already know you need a database)
+codegen -new test_project -mod github.com/prongbang
+cd test-project
+
+# 2. Add a database whenever you need one
+codegen database init -d mariadb
+
+# 3. Generate a CRUD feature from a JSON spec (the spec must include the primary key)
+mkdir -p spec && echo '{"id": "uuid", "name": "text", "active": 1}' > spec/brand.json
+codegen -f brand -s spec/brand.json -d mariadb -orm bun
+
+#    ...or straight from an existing table
+codegen -f brand -dsn "user:password@tcp(127.0.0.1:3306)/dbname" -orm bun
+
+# 4. Run it
+go run cmd/api/main.go -env development
+```
+
+Generate an OpenAPI spec from the finished project (run inside the project):
 
 ```shell
 codegen openapi -framework fiber ./... > docs/openapi.json
@@ -211,7 +254,8 @@ After generating, run `go mod tidy` inside the project, then start it with
 
 ### Add a Database Later
 
-A project created without `-d` has no database code. Add one at any time:
+A project created without `-d` has no database code at all. Add one at any time —
+run this **from the project root** (where `go.mod` is):
 
 ```shell
 codegen database init -d mariadb
@@ -221,21 +265,90 @@ codegen database init -d mariadb,mongodb,influxdb3
 
 Supported: `mariadb`, `mongodb`, `influxdb3`.
 
-This generates `internal/database` for the selected databases and wires them in:
+#### What it changes
 
-- adds the driver files and regenerates `internal/database/drivers.go`
-- gives `CreateApp` its `database.Drivers` parameter in `wire.go` / `wire_gen.go`
-- makes `cmd/api/main.go` build and close the driver
-- appends the config struct and the `development.yml` / `production.yml` sections
-- resolves the dependencies and runs `go mod tidy` + `wire`
+| File | Change |
+|---|---|
+| `internal/database/*.go` | Driver for each selected database, plus `drivers.go`, `wire.go`, `wire_gen.go` |
+| `wire.go`, `wire_gen.go` | `CreateApp` gains its `database.Drivers` parameter |
+| `cmd/api/main.go` | Builds the driver and closes it on shutdown |
+| `configuration/configuration.go` | Config struct fields for each database |
+| `configuration/development.yml`, `production.yml` | Connection settings to fill in |
+| `go.mod` | Database dependencies, then `go mod tidy` + `wire` |
 
-Running it again for a database that is already set up does nothing, and adding a
-second database keeps the existing one:
+So `cmd/api/main.go` goes from:
+
+```go
+apps := myproject.CreateApp()
+apps.StartAPI()
+```
+
+to:
+
+```go
+dbDriver := database.NewDatabaseDriver()
+defer dbDriver.Close()
+
+apps := myproject.CreateApp(dbDriver)
+apps.StartAPI()
+```
+
+#### Adding databases one at a time
+
+It merges with what the project already has, so the existing databases are kept,
+and re-running it for one that is already set up does nothing:
 
 ```shell
-codegen database init -d mongodb     # project now has mongodb
-codegen database init -d influxdb3   # project now has mongodb + influxdb3
+codegen database init -d mongodb     # project has mongodb
+codegen database init -d influxdb3   # project has mongodb + influxdb3
+codegen database init -d influxdb3   # "Nothing to do: influxdb3 already set up"
 ```
+
+#### Fill in the connection settings
+
+`database init` writes the settings with placeholder values — update
+`configuration/development.yml` (and `production.yml`) before running:
+
+```yaml
+mariadb:
+  host: "localhost"
+  port: 3306
+  database: "mariaDB"
+  user: "root"
+  pass: "password"
+
+mongodb:
+  host: "localhost"
+  port: 27017
+  database: "mongoDB"
+  user: "root"
+  pass: "password"
+
+influxdb3:
+  host: "http://localhost:8181"
+  token: ""
+  organization: ""
+  database: "influxDB"
+```
+
+#### Using the driver
+
+Inject `database.Drivers` into any provider and take the connection you need:
+
+```go
+func NewDataSource(driver database.Drivers) DataSource {
+	return &dataSource{Driver: driver}
+}
+
+driver.GetMariaDB()   // *bun.DB          (-d mariadb)
+driver.GetMongoDB()   // *mongo.Database  (-d mongodb)
+driver.GetInfluxDB3() // *influxdb3.Client (-d influxdb3)
+```
+
+> [!NOTE]
+> Only the databases you selected have a getter — `drivers.go` is generated from
+> the selected set, so asking for one you did not add is a compile error rather
+> than a nil connection at runtime.
 
 ### 1.1 Initial gRPC
 
@@ -327,16 +440,36 @@ test-project/internal/app/api/promotion
 
 Generate CRUD operations from JSON specifications:
 
+> [!IMPORTANT]
+> CRUD data sources talk to `internal/database`, so the project needs a database
+> first. On a project created without `-d` the generated code will not compile
+> (`no required module provides package .../internal/database`). Add one with
+> `codegen database init -d mariadb` before generating CRUD.
+
 #### 3.1 Define Spec File
 
-Create `spec/auth.json`:
+Create `spec/auth.json`. The field named `id` (case-insensitive) becomes the
+primary key, and the spec must contain one — without it the generated code will
+not compile:
+
 ```json
 {
+    "id": "uuid",
     "accessToken": "JWT",
     "expired": 1234567,
     "date": "2024-10-15T14:30:00Z"
 }
 ```
+
+Field values are samples that decide the Go type:
+
+| Sample value | Go type |
+|---|---|
+| `"uuid"`, `"text"`, any string | `string` |
+| `1234567` | `int64` |
+| `1.5` | `float64` |
+| `true` | `bool` |
+| `"2024-10-15T14:30:00Z"` | `*time.Time` |
 
 #### 3.2 Generate CRUD
 

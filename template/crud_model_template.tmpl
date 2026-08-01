@@ -52,7 +52,7 @@ func (m Create{{.ModelName}}Request) To{{.ModelName}}() {{.ModelName}} {
         {{ $field.Name }}: m.{{ $field.Name }},
         {{- else }}
         {{- if contains $field.Type "*" }}
-        {{ $field.Name }}: &m.{{ $field.Name }},
+        {{ $field.Name }}: m.{{ $field.Name }},
         {{- else }}
         {{ $field.Name }}: &m.{{ $field.Name }},
         {{- end }}
@@ -72,7 +72,11 @@ type Update{{.ModelName}}Request struct {
 	{{- if $field.PrimaryKey }}
     {{ $field.Name }} {{ $field.Type }} `json:"{{ $field.JsonTag }}" db:"{{ $field.DbTag }}" validate:"required"`
     {{- else }}
+	{{- if contains $field.Type "*" }}
+	{{ $field.Name }} {{ $field.Type }} `json:"{{ $field.JsonTag }}" db:"{{ $field.DbTag }}"`
+	{{- else }}
 	{{ $field.Name }} *{{ $field.Type }} `json:"{{ $field.JsonTag }}" db:"{{ $field.DbTag }}"`
+	{{- end }}
 	{{- end }}
 {{- end }}
 }
