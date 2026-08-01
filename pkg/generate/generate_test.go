@@ -1036,12 +1036,53 @@ func CreateApp() {
 		t.Fatal(err)
 	}
 
+	// Nothing injects the shared package yet, so binding its ProviderSet would
+	// make wire fail with `unused provider set`.
 	wire := readFile(t, filepath.Join(root, "wire.go"))
-	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
-		t.Fatalf("unexpected shared wire binding:\n%s", wire)
+	if strings.Contains(wire, "sharedcache.ProviderSet,") {
+		t.Fatalf("expected the shared ProviderSet to stay unbound until it is used:\n%s", wire)
 	}
 	if _, err := os.Stat(filepath.Join(root, "internal", "wire.go")); err == nil {
 		t.Fatal("shared binding must not create internal/wire.go")
+	}
+}
+
+func TestSharedBindingBindUpdatesWireOnceThePackageIsUsed(t *testing.T) {
+	root := t.TempDir()
+	apiDir := filepath.Join(root, "internal", "app", "api")
+	writeFile(t, filepath.Join(apiDir, ".keep"), "")
+	// A feature already injects the shared package, so wire.Build has a consumer
+	// and the CRUD providers can be bound.
+	writeFile(t, filepath.Join(root, "wire.go"), `package demo
+
+import (
+	sharedcache "github.com/acme/demo/internal/shared/cache"
+	//+codegen:import wire:package
+)
+
+func CreateApp() {
+	wire.Build(
+		sharedcache.ProviderSet,
+		//+codegen:func wire:build
+	)
+}`)
+	chdir(t, apiDir)
+
+	err := NewSharedBinding(filex.NewFileX()).Bind(option.Package{
+		Name: "cache",
+		Module: mod.Mod{
+			Module:  "github.com/acme/demo",
+			AppPath: "internal/app",
+		},
+		Spec: option.Spec{Orm: template.DatabaseMariaDB, Fields: []template.Field{{Name: "Id"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wire := readFile(t, filepath.Join(root, "wire.go"))
+	if !strings.Contains(wire, "sharedcache.ProviderSet,") {
+		t.Fatalf("expected the existing binding to be preserved:\n%s", wire)
 	}
 }
 
@@ -1074,8 +1115,8 @@ func CreateApp() {
 	}
 
 	wire := readFile(t, filepath.Join(root, "wire.go"))
-	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
-		t.Fatalf("unexpected fibergen shared wire binding:\n%s", wire)
+	if strings.Contains(wire, "sharedcache.ProviderSet,") {
+		t.Fatalf("expected the shared ProviderSet to stay unbound until it is used:\n%s", wire)
 	}
 	if !strings.Contains(wire, "//+fibergen:import wire:package") || !strings.Contains(wire, "//+fibergen:func wire:build") {
 		t.Fatalf("expected fibergen shared markers to be preserved:\n%s", wire)

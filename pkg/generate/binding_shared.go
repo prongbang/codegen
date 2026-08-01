@@ -49,27 +49,21 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 
 	wireB := b.FileX.ReadFile(wirePath)
 	wireText := wireB
-	sharedImport := fmt.Sprintf(`shared%s "%s/%s/shared/%s"`, common.ToLower(pkg.Name), pkg.Module.Module, appPath, common.ToLower(pkg.Name))
-	if !strings.Contains(wireText, sharedImport) {
-		wireText = replaceFirstMarker(wireText, wireImportMarkers(), func(marker string) string {
-			return fmt.Sprintf(
-				`%s
-	%s`, sharedImport, marker,
-			)
-		})
-	}
+	name := common.ToLower(pkg.Name)
+	sharedImport := fmt.Sprintf(`shared%s "%s/%s/shared/%s"`, name, pkg.Module.Module, appPath, name)
+	sharedProvider := fmt.Sprintf(`shared%s.ProviderSet,`, name)
 
-	sharedProvider := fmt.Sprintf(`shared%s.ProviderSet,`, common.ToLower(pkg.Name))
-	if !strings.Contains(wireText, sharedProvider) {
-		wireText = replaceFirstMarker(wireText, wireBuildMarkers(), func(marker string) string {
-			return fmt.Sprintf(
-				`%s
-		%s`, sharedProvider, marker,
-			)
-		})
+	// A shared package exists to be injected into a feature, and until one does
+	// wire rejects the whole build with `unused provider set "ProviderSet"`,
+	// leaving wire_gen.go stale so the next feature fails to compile. Bind it
+	// only once something references the package, and point the way otherwise.
+	if strings.Contains(wireText, sharedImport) || strings.Contains(wireText, sharedProvider) {
+		wireText = ensureCrudWireProviders(wireText, pkg, false)
+	} else {
+		pterm.Info.Printfln("Add these to wire.go once a feature injects shared%s:\n\t%s\n\t\t%s",
+			name, sharedImport, sharedProvider)
+		return b.finish(changeToRoot)
 	}
-
-	wireText = ensureCrudWireProviders(wireText, pkg, false)
 
 	spinnerBindWire, _ := pterm.DefaultSpinner.Start("Binding file wire.go")
 	if err := b.FileX.WriteFile(wirePath, []byte(wireText)); err == nil {
@@ -78,11 +72,14 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 		spinnerBindWire.Fail()
 	}
 
-	// Change to root directory
+	return b.finish(changeToRoot)
+}
+
+// finish restores the working directory the caller expects.
+func (b *sharedBinding) finish(changeToRoot string) error {
 	if changeToRoot != "" {
 		return b.FileX.Chdir(changeToRoot)
 	}
-
 	return nil
 }
 
