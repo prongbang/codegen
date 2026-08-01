@@ -27,7 +27,7 @@
 
 Latest version:
 ```shell
-go install github.com/prongbang/codegen@v1.6.1
+go install github.com/prongbang/codegen@v1.7.0
 ```
 
 ## 🚩 CLI Flags

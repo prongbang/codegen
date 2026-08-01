@@ -108,7 +108,7 @@ func newApp() *cli.App {
 	return &cli.App{
 		Name:      "codegen",
 		Usage:     "Generate a Clean Architecture for REST API with support for the Fiber Web Framework in Golang",
-		Version:   "v1.4.5",
+		Version:   "v1.7.0",
 		Compiled:  time.Now(),
 		Copyright: "(c) 2023 prongbang",
 		Authors: []*cli.Author{
