@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/prongbang/fibererror"
+	"github.com/prongbang/fiberresp"
 	"github.com/prongbang/goerror"
 )
 
@@ -110,13 +110,13 @@ func (c *customResponse) Response(ctx *fiber.Ctx, err error) error {
 	return nil
 }
 
-func NewCustomResponse() fibererror.Custom {
+func NewCustomResponse() fiberresp.Custom {
 	return &customResponse{}
 }
 
-func New() fibererror.Response {
+func New() fiberresp.Responder {
 	customResp := NewCustomResponse()
-	return fibererror.New(&fibererror.Config{
+	return fiberresp.New(&fiberresp.Config{
 		Custom: &customResp,
 	})
 }

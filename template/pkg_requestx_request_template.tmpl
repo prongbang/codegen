@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/prongbang/fibererror"
+	"github.com/prongbang/fiberresp"
 	"github.com/prongbang/goerror"
 
 	"{{.Module}}/internal/pkg/response"
@@ -90,7 +90,7 @@ type ApiHandler interface {
 }
 
 type apiHandler struct {
-	Response fibererror.Response
+	Response fiberresp.Responder
 	Validate *validator.Validate
 }
 
@@ -224,7 +224,7 @@ func (h *apiHandler) bodyParserIfRequired(c *fiber.Ctx, requestPtr interface{}) 
 	return true, nil
 }
 
-func NewRequestHandler(response fibererror.Response, validate *validator.Validate) ApiHandler {
+func NewRequestHandler(response fiberresp.Responder, validate *validator.Validate) ApiHandler {
 	return &apiHandler{
 		Response: response,
 		Validate: validate,

@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/innotechdevops/core/finder"
-	"github.com/prongbang/fibererror"
+	"github.com/prongbang/fiberresp"
 	"github.com/prongbang/goerror"
 	"{{.Module}}/configuration"
 	"{{.Module}}/pkg/core"
@@ -17,7 +17,7 @@ var (
 	}
 )
 
-func NewJWT(response fibererror.Response) fiber.Handler {
+func NewJWT(response fiberresp.Responder) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Non-Required auth
 		if finder.Contains(c.Path(), ExcludeUrls...) {
