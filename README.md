@@ -18,7 +18,6 @@
 - 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
 - 🔌 **Optional Database** - Projects are generated without database code unless you ask for it; MariaDB, MongoDB and InfluxDB 3 can be added at any time
 - 📡 **MQTT Template** - Scaffold an MQTT forward service instead of a REST API
-- 📦 **Shared Helpers from `core`** - Paging, params, response, JWT and the `*x` utilities come from [`innotechdevops/core`](https://github.com/innotechdevops/core) instead of being copied into every project
 - 🛠️ **Open API Generation** - Generate Open API without configuration
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
@@ -30,9 +29,6 @@ Latest version:
 ```shell
 go install github.com/prongbang/codegen@v1.6.1
 ```
-
-Generated projects require **`github.com/innotechdevops/core` v1.0.10 or newer**.
-It is added to the generated `go.mod` automatically.
 
 ## 🚩 CLI Flags
 
