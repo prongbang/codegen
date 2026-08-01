@@ -348,7 +348,9 @@ func getProjectContext(fx filex.FileX) (string, string, error) {
 		return rootDir, module, nil
 	}
 
-	return "", "", fmt.Errorf("go.mod not found, run `codegen grpc init` from the project root or internal/app/api")
+	// Shared by the grpc and database commands, so the message must not name one
+	// of them.
+	return "", "", fmt.Errorf("go.mod not found, run this command from the project root or internal/app/api")
 }
 
 func parseModuleName(goMod string) string {
