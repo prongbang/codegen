@@ -861,6 +861,87 @@ func NewRouters(
 	}
 }
 
+func TestEnsureCrudWireProvidersBindsDatabaseNewDBOnlyForBun(t *testing.T) {
+	wireText := `func CreateApp() {
+	wire.Build(
+		//+codegen:func wire:build
+	)
+}`
+	fields := []template.Field{{Name: "Id"}}
+
+	// The bun datasource takes dbre.AppIDB, which database.NewDB provides.
+	bun := ensureCrudWireProviders(wireText, option.Package{
+		Spec: option.Spec{Orm: "bun", Fields: fields},
+	}, false)
+	if !strings.Contains(bun, "database.NewDB,") {
+		t.Fatalf("expected database.NewDB to be bound for bun:\n%s", bun)
+	}
+
+	// The sqlbuilder datasource takes database.Drivers, so binding database.NewDB
+	// would leave it unused and wire fails the whole build.
+	sqlbuilder := ensureCrudWireProviders(wireText, option.Package{
+		Spec: option.Spec{Orm: "sqlbuilder", Fields: fields},
+	}, false)
+	if strings.Contains(sqlbuilder, "database.NewDB") {
+		t.Fatalf("expected database.NewDB NOT to be bound for sqlbuilder:\n%s", sqlbuilder)
+	}
+
+	// Prototype packages have no spec fields and never need it.
+	prototype := ensureCrudWireProviders(wireText, option.Package{
+		Spec: option.Spec{Orm: "bun"},
+	}, false)
+	if strings.Contains(prototype, "database.NewDB") {
+		t.Fatalf("expected database.NewDB NOT to be bound without spec fields:\n%s", prototype)
+	}
+}
+
+func TestEnsureCrudWireProvidersBindsMiddlewareOnlyForBunRouter(t *testing.T) {
+	wireText := `import (
+	//+codegen:import wire:package
+)
+
+func CreateApp() {
+	wire.Build(
+		//+codegen:func wire:build
+	)
+}`
+	pkg := func(orm string) option.Package {
+		return option.Package{
+			Module: mod.Mod{Module: "github.com/acme/demo"},
+			Spec:   option.Spec{Orm: orm, Fields: []template.Field{{Name: "Id"}}},
+		}
+	}
+
+	// Only the bun router takes middleware.OnRequest.
+	bun := ensureCrudWireProviders(wireText, pkg("bun"), true)
+	if !strings.Contains(bun, "middleware.NewOnRequest,") ||
+		!strings.Contains(bun, "middleware.NewOnRequestOptions,") ||
+		!strings.Contains(bun, `"github.com/acme/demo/internal/middleware"`) {
+		t.Fatalf("expected middleware providers and import to be bound for bun:\n%s", bun)
+	}
+
+	// The sqlbuilder router takes no middleware, so a provider would be unused.
+	sqlbuilder := ensureCrudWireProviders(wireText, pkg("sqlbuilder"), true)
+	if strings.Contains(sqlbuilder, "middleware.New") {
+		t.Fatalf("expected no middleware provider for sqlbuilder:\n%s", sqlbuilder)
+	}
+
+	// Shared packages pass withOnRequest=false and must never get one.
+	shared := ensureCrudWireProviders(wireText, pkg("bun"), false)
+	if strings.Contains(shared, "middleware.New") {
+		t.Fatalf("expected no middleware provider when withOnRequest is false:\n%s", shared)
+	}
+
+	// A project that already binds its own provider must not get a second one,
+	// which would break wire.
+	existing := strings.Replace(wireText, "//+codegen:func wire:build",
+		"middleware.NewOnRequestGuard,\n\t\t//+codegen:func wire:build", 1)
+	got := ensureCrudWireProviders(existing, pkg("bun"), true)
+	if strings.Contains(got, "middleware.NewOnRequest,") {
+		t.Fatalf("expected existing middleware provider to be left alone:\n%s", got)
+	}
+}
+
 func TestFeatureBindingBindSupportsFibergenMarkers(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "internal", "app", "api")
@@ -929,7 +1010,9 @@ func TestSharedBindingBind(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "internal", "app", "api")
 	writeFile(t, filepath.Join(apiDir, ".keep"), "")
-	writeFile(t, filepath.Join(root, "internal", "wire.go"), `package demo
+	// A generated project carries the marker-bearing wire.go at the project root
+	// (there is no internal/wire.go), same as the feature binding.
+	writeFile(t, filepath.Join(root, "wire.go"), `package demo
 
 import (
 	//+codegen:import wire:package
@@ -953,9 +1036,12 @@ func CreateApp() {
 		t.Fatal(err)
 	}
 
-	wire := readFile(t, filepath.Join(root, "internal", "wire.go"))
+	wire := readFile(t, filepath.Join(root, "wire.go"))
 	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
 		t.Fatalf("unexpected shared wire binding:\n%s", wire)
+	}
+	if _, err := os.Stat(filepath.Join(root, "internal", "wire.go")); err == nil {
+		t.Fatal("shared binding must not create internal/wire.go")
 	}
 }
 
@@ -963,7 +1049,7 @@ func TestSharedBindingBindSupportsFibergenMarkers(t *testing.T) {
 	root := t.TempDir()
 	apiDir := filepath.Join(root, "internal", "app", "api")
 	writeFile(t, filepath.Join(apiDir, ".keep"), "")
-	writeFile(t, filepath.Join(root, "internal", "wire.go"), `package demo
+	writeFile(t, filepath.Join(root, "wire.go"), `package demo
 
 import (
 	//+fibergen:import wire:package
@@ -987,7 +1073,7 @@ func CreateApp() {
 		t.Fatal(err)
 	}
 
-	wire := readFile(t, filepath.Join(root, "internal", "wire.go"))
+	wire := readFile(t, filepath.Join(root, "wire.go"))
 	if !strings.Contains(wire, `sharedcache "github.com/acme/demo/internal/shared/cache"`) || !strings.Contains(wire, "sharedcache.ProviderSet,") {
 		t.Fatalf("unexpected fibergen shared wire binding:\n%s", wire)
 	}

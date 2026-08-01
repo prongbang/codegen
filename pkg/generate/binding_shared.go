@@ -16,7 +16,9 @@ type sharedBinding struct {
 }
 
 func (b *sharedBinding) Bind(pkg option.Package) error {
-	changeToRoot := "../../"
+	// Bind runs from <root>/internal/app/api, so the project root is three
+	// levels up — the same depth the feature binding uses.
+	changeToRoot := "../../../"
 	pwd, err := b.FileX.Getwd()
 	if err != nil {
 		return err
@@ -35,6 +37,10 @@ func (b *sharedBinding) Bind(pkg option.Package) error {
 		}
 
 		wirePath = "/" + pwdRoot + "/wire.go"
+
+		// Restore the working directory so the trailing Chdir(changeToRoot)
+		// below lands on the project root rather than above it.
+		_ = b.FileX.Chdir(pwd)
 	} else {
 		// Reset root path
 		changeToRoot = ""
