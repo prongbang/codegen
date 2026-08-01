@@ -279,6 +279,12 @@ func (g *grpcGenerator) NewClient(name string) error {
 		return err
 	}
 
+	// The client is generated without running wire, so the runtime versions have
+	// to be resolved here too.
+	if err := g.resolveGRPCModules(rootDir); err != nil {
+		return err
+	}
+
 	pterm.Success.Println("Generate gRPC client", thirdpartyName+"/"+serviceName)
 	return nil
 }
@@ -307,8 +313,40 @@ func (g *grpcGenerator) generateClientProto(rootDir, thirdparty, service string)
 	return err
 }
 
-func (g *grpcGenerator) runWire(rootDir string) error {
+// grpcRuntimeModules are the versions the generated code needs at build time.
+//
+// protoc-gen-go-grpc emits `const _ = grpc.SupportPackageIsVersion9`, which only
+// exists from gRPC-Go v1.64, and protoc-gen-go emits a protoimpl version
+// assertion. go mod tidy will not raise a requirement on its own: it takes the
+// highest version the module graph already asks for, and viper alone pins
+// google.golang.org/grpc v1.43, so the generated package fails to compile with
+// "undefined: grpc.SupportPackageIsVersion9". Requesting the versions explicitly
+// is what lifts them.
+func grpcRuntimeModules() []string {
+	return []string{
+		"google.golang.org/grpc@v1.83.0",
+		"google.golang.org/protobuf@v1.36.11",
+	}
+}
+
+func (g *grpcGenerator) resolveGRPCModules(rootDir string) error {
 	if err := g.FileX.Chdir(rootDir); err != nil {
+		return err
+	}
+
+	spinner, _ := pterm.DefaultSpinner.Start("Resolving gRPC dependencies")
+	for _, module := range grpcRuntimeModules() {
+		if _, err := g.Cmd.Run("go", "get", module); err != nil {
+			spinner.Fail(err)
+			return fmt.Errorf("go get %s: %w", module, err)
+		}
+	}
+	spinner.Success()
+	return nil
+}
+
+func (g *grpcGenerator) runWire(rootDir string) error {
+	if err := g.resolveGRPCModules(rootDir); err != nil {
 		return err
 	}
 	if err := g.Wire.Install(); err != nil {
