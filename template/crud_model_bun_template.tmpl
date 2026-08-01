@@ -13,7 +13,7 @@ type {{.ModelName}} struct {
     bun.BaseModel `bun:"table:{{.TableName}},alias:{{- $name := .TableName }}
     {{- range $index, $word := split $name "_" }}
         {{- printf "%.1s" $word }}{{- if ne $index (sub (len (split $name "_")) 1) }}_{{- end }}
-    {{- end }}" json:"-" swaggerignore:"true"`
+    {{- end }}" json:"-"`
 {{- range $field := $fields }}
 	{{- if $field.PrimaryKey }}
 	{{ $field.Name }} {{ $field.Type }} `bun:"{{ $field.DbTag }},pk" json:"{{ $field.JsonTag }}" db:"{{ $field.DbTag }}"`
