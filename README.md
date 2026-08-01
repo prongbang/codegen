@@ -18,6 +18,7 @@
 - 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
 - 🔌 **Optional Database** - Projects are generated without database code unless you ask for it; MariaDB, MongoDB and InfluxDB 3 can be added at any time
 - 📡 **MQTT Template** - Scaffold an MQTT forward service instead of a REST API
+- 📦 **Shared Helpers from `core`** - Paging, params, response, JWT and the `*x` utilities come from [`innotechdevops/core`](https://github.com/innotechdevops/core) instead of being copied into every project
 - 🛠️ **Open API Generation** - Generate Open API without configuration
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
@@ -29,6 +30,11 @@ Latest version:
 ```shell
 go install github.com/prongbang/codegen@v1.6.1
 ```
+
+Generated projects require **`github.com/innotechdevops/core` v1.0.10 or newer** —
+that is where the shared helpers live (see
+[Shared helpers](#shared-helpers-come-from-innotechdevopscore)). It is added to
+the generated `go.mod` automatically.
 
 ## 🚩 CLI Flags
 
@@ -203,6 +209,56 @@ instead, so a fix in one place reaches every project:
 
 Only `pkg/requestx` stays in the project, because it is wired to the project's
 own `internal/pkg/response`.
+
+<details>
+<summary><b>Migrating a project generated before this change</b></summary>
+
+Existing projects keep working as they are — nothing forces the move. To adopt
+core, delete the copied packages and repoint the imports:
+
+```shell
+rm -rf pkg/core pkg/structx pkg/multipartx pkg/streamx pkg/typex pkg/schema pkg/collection
+```
+
+Then rewrite the imports (`<module>` is your module path):
+
+| Old import | New import |
+|---|---|
+| `<module>/pkg/core` | `github.com/innotechdevops/core` |
+| `<module>/pkg/structx` | `github.com/innotechdevops/core/structx` |
+| `<module>/pkg/multipartx` | `github.com/innotechdevops/core/multipartx` |
+| `<module>/pkg/streamx` | `github.com/innotechdevops/core/streamx` |
+| `<module>/pkg/typex` | `github.com/innotechdevops/core/typex` |
+| `<module>/pkg/schema` | `github.com/innotechdevops/core/schema` |
+| `<module>/pkg/collection` | `github.com/innotechdevops/core/collectionx` |
+
+The package name stays `core`, so `core.Paging`, `core.UserRequestInfo` and the
+rest are untouched. Three call sites do change, because those helpers live in
+more specific core packages — **each one also needs its import added**, since
+renaming the selector alone leaves the file referring to a package it does not
+import:
+
+| Old call | New call | Import to add |
+|---|---|---|
+| `core.IsEmpty(s)` | `stringx.IsEmpty(s)` | `github.com/innotechdevops/core/stringx` |
+| `core.Uuid()` | `uuidx.NewID()` | `github.com/innotechdevops/core/uuidx` |
+| `collection.Map(...)` | `collectionx.Map(...)` | `github.com/innotechdevops/core/collectionx` |
+
+Finally:
+
+```shell
+go get github.com/innotechdevops/core@v1.0.10
+go mod tidy
+go build ./...
+```
+
+> [!NOTE]
+> `core.Flag*` and `core.Params` in `innotechdevops/core` were replaced by the
+> scaffold's versions, so a project that used core's older `FlagAvailable` /
+> `FlagUnavailable` constants or its `Params{OffsetNo, LimitNo}` needs those call
+> sites updated.
+
+</details>
 
 ### Create a New Project - MQTT
 
