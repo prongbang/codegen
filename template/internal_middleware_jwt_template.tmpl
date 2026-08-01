@@ -6,7 +6,8 @@ import (
 	"github.com/prongbang/fiberresp"
 	"github.com/prongbang/goerror"
 	"{{.Module}}/configuration"
-	"{{.Module}}/pkg/core"
+	"github.com/innotechdevops/core"
+	"github.com/innotechdevops/core/stringx"
 )
 
 var (
@@ -25,7 +26,7 @@ func NewJWT(response fiberresp.Responder) fiber.Handler {
 		}
 
 		requestToken := core.ExtractToken(core.Authorization(c))
-		if core.IsEmpty(requestToken) {
+		if stringx.IsEmpty(requestToken) {
 			body := core.AccessToken{}
 			if err := c.BodyParser(&body); err != nil {
 				return response.With(c).Response(goerror.NewUnauthorized())

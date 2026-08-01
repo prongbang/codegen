@@ -4,7 +4,7 @@ import (
 	{{- range .Imports }}
 	"{{ . }}"
 	{{- end }}
-	"{{ .Module }}/pkg/core"
+	"github.com/innotechdevops/core"
 )
 
 {{- $fields := .Fields }}

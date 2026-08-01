@@ -51,46 +51,6 @@ var ConfigurationProductionTemplate string
 //go:embed configuration_template.tmpl
 var ConfigurationTemplate string
 
-// Core
-
-//go:embed pkg_core_flag_template.tmpl
-var CoreFlagTemplate string
-
-//go:embed pkg_core_handler_template.tmpl
-var CoreHandlerTemplate string
-
-//go:embed pkg_core_sorting_template.tmpl
-var CoreSortingTemplate string
-
-//go:embed pkg_core_header_template.tmpl
-var CoreHeaderTemplate string
-
-//go:embed pkg_core_common_template.tmpl
-var CoreCommonTemplate string
-
-//go:embed pkg_core_jwt_template.tmpl
-var CoreJWTTemplate string
-
-//go:embed pkg_core_paging_template.tmpl
-var CorePagingTemplate string
-
-//go:embed pkg_core_params_template.tmpl
-var CoreParamsTemplate string
-
-//go:embed pkg_core_request_template.tmpl
-var CoreRequestTemplate string
-
-//go:embed pkg_core_response_template.tmpl
-var CoreResponseTemplate string
-
-//go:embed pkg_core_router_template.tmpl
-var CoreRouterTemplate string
-
-// MultipartX
-
-//go:embed pkg_multipartx_template.tmpl
-var MultipartXTemplate string
-
 // CRUD
 
 //go:embed crud_datasource_bun_template.tmpl
@@ -187,12 +147,6 @@ var InternalPkgResponseTemplate string
 
 //go:embed internal_pkg_validator_template.tmpl
 var InternalPkgValidatorTemplate string
-
-//go:embed internal_pkg_streamx_template.tmpl
-var InternalPkgStreamXTemplate string
-
-//go:embed internal_pkg_typex_template.tmpl
-var InternalPkgTypeXTemplate string
 
 // Internal Middleware
 
@@ -361,19 +315,6 @@ var MqttPayloadTemplate string
 
 //go:embed pkg_requestx_request_template.tmpl
 var RequestXRequestTemplate string
-
-// Schema
-
-//go:embed pkg_schema_sql_template.tmpl
-var SchemaSQLTemplate string
-
-// StructX
-
-//go:embed pkg_structx_template.tmpl
-var StructXTemplate string
-
-//go:embed pkg_collection_map_template.tmpl
-var CollectionMapTemplate string
 
 // Wire
 

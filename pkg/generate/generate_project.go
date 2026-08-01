@@ -133,81 +133,11 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 			Data:     template.Project{Name: opt.Project},
 		},
 
-		// Core package files
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/handler.go", currentDir),
-			Template: template.CoreHandlerTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/paging.go", currentDir),
-			Template: template.CorePagingTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/params.go", currentDir),
-			Template: template.CoreParamsTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/request.go", currentDir),
-			Template: template.CoreRequestTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/response.go", currentDir),
-			Template: template.CoreResponseTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/router.go", currentDir),
-			Template: template.CoreRouterTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/jwt.go", currentDir),
-			Template: template.CoreJWTTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/flag.go", currentDir),
-			Template: template.CoreFlagTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/sorting.go", currentDir),
-			Template: template.CoreSortingTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/header.go", currentDir),
-			Template: template.CoreHeaderTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/core/common.go", currentDir),
-			Template: template.CoreCommonTemplate,
-		},
-
 		// Other package files
-		{
-			Path:     fmt.Sprintf("%s/pkg/multipartx/multipartx.go", currentDir),
-			Template: template.MultipartXTemplate,
-		},
 		{
 			Path:     fmt.Sprintf("%s/pkg/requestx/request.go", currentDir),
 			Template: template.RequestXRequestTemplate,
 			Data:     template.Project{Module: opt.Module},
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/structx/structx.go", currentDir),
-			Template: template.StructXTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/collection/map.go", currentDir),
-			Template: template.CollectionMapTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/schema/sql.go", currentDir),
-			Template: template.SchemaSQLTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/streamx/streamx.go", currentDir),
-			Template: template.InternalPkgStreamXTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/pkg/typex/typex.go", currentDir),
-			Template: template.InternalPkgTypeXTemplate,
 		},
 
 		// Casbin policy files

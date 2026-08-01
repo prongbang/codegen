@@ -175,30 +175,8 @@ This creates the following structure:
 │               └── validator.go
 │
 ├── pkg
-│     ├── core
-│     │     ├── common.go
-│     │     ├── flag.go
-│     │     ├── handler.go
-│     │     ├── header.go
-│     │     ├── jwt.go
-│     │     ├── paging.go
-│     │     ├── params.go
-│     │     ├── request.go
-│     │     ├── response.go
-│     │     ├── router.go
-│     │     └── sorting.go
-│     ├── multipartx
-│     │     └── multipartx.go
-│     ├── requestx
-│     │     └── request.go
-│     ├── schema
-│     │     └── sql.go
-│     ├── streamx
-│     │     └── streamx.go
-│     ├── structx
-│     │     └── structx.go
-│     └── typex
-│         └── typex.go
+│     └── requestx          # the shared helpers live in innotechdevops/core
+│         └── request.go
 ├── policy
 │     ├── model.conf
 │     └── policy.csv
@@ -207,6 +185,24 @@ This creates the following structure:
 ├── wire.go
 └── wire_gen.go
 ```
+
+#### Shared helpers come from `innotechdevops/core`
+
+Generated projects no longer carry their own copy of the shared helpers — they
+import [`github.com/innotechdevops/core`](https://github.com/innotechdevops/core)
+instead, so a fix in one place reaches every project:
+
+| Used as | Package |
+|---|---|
+| `core.Paging[T]`, `core.Params`, `core.UserRequestInfo`, `core.Router`, `core.Ok`, `core.GenerateTokenInfo`, … | `github.com/innotechdevops/core` |
+| `stringx.IsEmpty`, `stringx.TrimBy`, `stringx.GetStackTrace` | `core/stringx` |
+| `collectionx.Map`, `collectionx.First`, `collectionx.Last` | `core/collectionx` |
+| `uuidx.NewID`, `uuidx.NewIDPtr` | `core/uuidx` |
+| `pointer.New`, `pointer.Deref` | `core/pointer` |
+| `structx`, `multipartx`, `streamx`, `typex`, `schema` | `core/<name>` |
+
+Only `pkg/requestx` stays in the project, because it is wired to the project's
+own `internal/pkg/response`.
 
 ### Create a New Project - MQTT
 

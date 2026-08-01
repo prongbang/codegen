@@ -8,8 +8,9 @@ import (
 	"github.com/prongbang/goerror"
 	"github.com/prongbang/sqlbuilder"
 	"{{.Module}}/internal/pkg/response"
-	"{{.Module}}/pkg/collection"
-	"{{.Module}}/pkg/core"
+	"github.com/innotechdevops/core/collectionx"
+	"github.com/innotechdevops/core"
+	"github.com/innotechdevops/core/uuidx"
 	"{{.Module}}/internal/database"
 )
 
@@ -136,7 +137,7 @@ func (d *dataSource) Create(ctx context.Context, obj *Create{{.ModelName}}Reques
 	conn := d.Driver.{{.DriverName}}()
 {{- if eq .PrimaryField.Type "string" }}
     if obj.Id == "" {
-        obj.Id = core.Uuid()
+        obj.Id = uuidx.NewID()
     }
 {{- end }}
     valuesMap := sqlbuilder.Map{
@@ -188,7 +189,7 @@ func (d *dataSource) CreateList(ctx context.Context, obj *[]Create{{.ModelName}}
 	for _, v := range *obj {
 	    {{- if eq .PrimaryField.Type "string" }}
         if v.Id == "" {
-            v.Id = core.Uuid()
+            v.Id = uuidx.NewID()
         }
         {{- end }}
 		values = append(values, []interface{}{
@@ -211,7 +212,7 @@ func (d *dataSource) CreateList(ctx context.Context, obj *[]Create{{.ModelName}}
 		return nil, response.NewInsertError()
 	}
 
-	return pointer.New(collection.Map(*obj, Create{{.ModelName}}Request.To{{.ModelName}})), nil
+	return pointer.New(collectionx.Map(*obj, Create{{.ModelName}}Request.To{{.ModelName}})), nil
 }
 
 func (d *dataSource) Update(ctx context.Context, obj *Update{{.ModelName}}Request) (*{{.ModelName}}, error) {
@@ -263,7 +264,7 @@ func (d *dataSource) UpdateList(ctx context.Context, obj *[]Update{{.ModelName}}
 		return nil, response.NewUpdateError()
 	}
 
-	return pointer.New(collection.Map(*obj, Update{{.ModelName}}Request.To{{.ModelName}})), nil
+	return pointer.New(collectionx.Map(*obj, Update{{.ModelName}}Request.To{{.ModelName}})), nil
 }
 
 func (d *dataSource) Delete(ctx context.Context, obj *Delete{{.ModelName}}Request) (*core.Empty, error) {

@@ -1339,10 +1339,26 @@ func TestGetProjectConfigContainsExpectedFiles(t *testing.T) {
 		"/tmp/demo/go.mod",
 		"/tmp/demo/cmd/api/main.go",
 		"/tmp/demo/internal/app/app.go",
-		"/tmp/demo/pkg/core/router.go",
+		"/tmp/demo/pkg/requestx/request.go",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing config path %s", want)
+		}
+	}
+
+	// The shared helpers now come from github.com/innotechdevops/core instead of
+	// being copied into every project.
+	for _, gone := range []string{
+		"/tmp/demo/pkg/core/",
+		"/tmp/demo/pkg/structx/",
+		"/tmp/demo/pkg/multipartx/",
+		"/tmp/demo/pkg/collection/",
+		"/tmp/demo/pkg/schema/",
+		"/tmp/demo/pkg/streamx/",
+		"/tmp/demo/pkg/typex/",
+	} {
+		if strings.Contains(joined, gone) {
+			t.Fatalf("expected %s to come from core, not be generated:\n%s", gone, joined)
 		}
 	}
 

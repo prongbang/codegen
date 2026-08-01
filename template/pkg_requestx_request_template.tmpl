@@ -13,11 +13,12 @@ import (
 	"github.com/prongbang/goerror"
 
 	"{{.Module}}/internal/pkg/response"
-	"{{.Module}}/pkg/core"
-	"{{.Module}}/pkg/multipartx"
-	"{{.Module}}/pkg/streamx"
-	"{{.Module}}/pkg/structx"
-	"{{.Module}}/pkg/typex"
+	"github.com/innotechdevops/core"
+	"github.com/innotechdevops/core/stringx"
+	"github.com/innotechdevops/core/multipartx"
+	"github.com/innotechdevops/core/streamx"
+	"github.com/innotechdevops/core/structx"
+	"github.com/innotechdevops/core/typex"
 )
 
 type model[T any] struct {
@@ -44,7 +45,7 @@ func Get[T any](c *fiber.Ctx) *T {
 
 func GetRequestToken(c *fiber.Ctx) string {
 	requestToken := core.ExtractToken(core.Authorization(c))
-	if core.IsEmpty(requestToken) {
+	if stringx.IsEmpty(requestToken) {
 		accessToken := core.AccessToken{}
 		_ = c.BodyParser(&accessToken)
 		return accessToken.Token
@@ -57,7 +58,7 @@ func GetRequestInfo(c *fiber.Ctx, onRequestToken func(c *fiber.Ctx) string) *cor
 		HasUserRequest: false,
 	}
 	userRequestToken := onRequestToken(c)
-	if core.IsEmpty(userRequestToken) {
+	if stringx.IsEmpty(userRequestToken) {
 		return userRequestInfo
 	}
 
