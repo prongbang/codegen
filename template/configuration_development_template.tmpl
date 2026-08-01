@@ -14,12 +14,16 @@ casbin:
   model: "policy/model.conf"
   policy: "policy/policy.csv"
 
+{{- if .HasMongoDB }}
+
 mongodb:
   host: "localhost"
   port: 27017
   database: "mongoDB"
   user: "root"
   pass: "password"
+{{- end }}
+{{- if .HasMariaDB }}
 
 mariadb:
   host: "localhost"
@@ -27,3 +31,12 @@ mariadb:
   database: "mariaDB"
   user: "root"
   pass: "password"
+{{- end }}
+{{- if .HasInfluxDB3 }}
+
+influxdb3:
+  host: "http://localhost:8181"
+  token: ""
+  organization: ""
+  database: "influxDB"
+{{- end }}

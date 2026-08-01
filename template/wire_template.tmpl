@@ -8,14 +8,16 @@ import (
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/app/api"
 	"{{.Module}}/internal/app/api/health"
+{{- if .HasDatabase }}
 	"{{.Module}}/internal/database"
+{{- end }}
 	"{{.Module}}/internal/pkg/response"
 	"{{.Module}}/internal/pkg/validator"
 	"{{.Module}}/pkg/requestx"
 	//+codegen:import wire:package
 )
 
-func CreateApp(dbDriver database.Drivers) app.App {
+func CreateApp({{if .HasDatabase}}dbDriver database.Drivers{{end}}) app.App {
 	wire.Build(
 		app.NewApp,
 		api.New,

@@ -10,7 +10,9 @@ import (
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/app/api"
 	"{{.Module}}/internal/app/api/health"
+{{- if .HasDatabase }}
 	"{{.Module}}/internal/database"
+{{- end }}
 	"{{.Module}}/internal/pkg/response"
 	"{{.Module}}/internal/pkg/validator"
 	"{{.Module}}/pkg/requestx"
@@ -18,7 +20,7 @@ import (
 
 // Injectors from wire.go:
 
-func CreateApp(dbDriver database.Drivers) app.App {
+func CreateApp({{if .HasDatabase}}dbDriver database.Drivers{{end}}) app.App {
 	useCase := health.NewUseCase()
 	fiberrespResponder := response.New()
 	validate := validator.New()

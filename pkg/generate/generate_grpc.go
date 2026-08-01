@@ -120,7 +120,7 @@ func (g *grpcGenerator) Init() error {
 		return err
 	}
 
-	rootDir, module, err := getGRPCProjectContext(g.FileX)
+	rootDir, module, err := getProjectContext(g.FileX)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (g *grpcGenerator) New(name string) error {
 		return err
 	}
 
-	rootDir, module, err := getGRPCProjectContext(g.FileX)
+	rootDir, module, err := getProjectContext(g.FileX)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (g *grpcGenerator) NewClient(name string) error {
 		return err
 	}
 
-	rootDir, module, err := getGRPCProjectContext(g.FileX)
+	rootDir, module, err := getProjectContext(g.FileX)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func (g *grpcGenerator) runWire(rootDir string) error {
 	return g.Runner.Run()
 }
 
-func getGRPCProjectContext(fx filex.FileX) (string, string, error) {
+func getProjectContext(fx filex.FileX) (string, string, error) {
 	pwd, err := fx.Getwd()
 	if err != nil {
 		return "", "", err

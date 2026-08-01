@@ -22,6 +22,8 @@ type configuration struct {
 		Model  string `mapstructure:"model"`
 		Policy string `mapstructure:"policy"`
 	} `mapstructure:"casbin"`
+	//+codegen:struct configuration
+{{- if .HasMongoDB }}
 	Mongodb struct {
 		Host     string `mapstructure:"host"`
 		Port     int    `mapstructure:"port"`
@@ -29,13 +31,24 @@ type configuration struct {
 		User     string `mapstructure:"user"`
 		Pass     string `mapstructure:"pass"`
 	} `mapstructure:"mongodb"`
-    Mariadb struct {
-        Host     string `mapstructure:"host"`
-        Port     int    `mapstructure:"port"`
-        Database string `mapstructure:"database"`
-        User     string `mapstructure:"user"`
-        Pass     string `mapstructure:"pass"`
-    } `mapstructure:"mariadb"`
+{{- end }}
+{{- if .HasMariaDB }}
+	Mariadb struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		Database string `mapstructure:"database"`
+		User     string `mapstructure:"user"`
+		Pass     string `mapstructure:"pass"`
+	} `mapstructure:"mariadb"`
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	Influxdb3 struct {
+		Host         string `mapstructure:"host"`
+		Token        string `mapstructure:"token"`
+		Organization string `mapstructure:"organization"`
+		Database     string `mapstructure:"database"`
+	} `mapstructure:"influxdb3"`
+{{- end }}
 }
 
 var Config configuration

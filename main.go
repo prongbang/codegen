@@ -16,6 +16,7 @@ import (
 	"github.com/prongbang/codegen/pkg/dbdriver"
 	"github.com/prongbang/codegen/pkg/option"
 	"github.com/prongbang/codegen/pkg/tools"
+	"github.com/prongbang/codegen/template"
 	"github.com/urfave/cli/v2"
 )
 
@@ -71,6 +72,12 @@ func newGRPCGenerator() generate.GRPCGenerator {
 	wireInstaller := tools.NewWireInstaller(cmd)
 	wireRunner := tools.NewWireRunner(cmd)
 	return generate.NewGRPCGenerator(fileX, cmd, grpcInstaller, wireInstaller, wireRunner)
+}
+
+func newDatabaseGenerator() generate.DatabaseGenerator {
+	cmd := command.New()
+	fileX := filex.NewFileX()
+	return generate.NewDatabaseGenerator(fileX, cmd, tools.NewWireInstaller(cmd), tools.NewWireRunner(cmd))
 }
 
 func newGenerator() generate.Generator {
@@ -162,6 +169,37 @@ func newApp() *cli.App {
 				},
 			},
 			{
+				Name:  "database",
+				Usage: "Database utilities",
+				Action: func(c *cli.Context) error {
+					return cli.ShowSubcommandHelp(c)
+				},
+				Subcommands: []*cli.Command{
+					{
+						Name:  "init",
+						Usage: "Add database code to an existing project, e.g. -d mariadb,influxdb3",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "driver",
+								Aliases: []string{"d"},
+								Usage:   fmt.Sprintf("-d %s", strings.Join(template.SupportedDatabases(), ",")),
+							},
+						},
+						Action: func(c *cli.Context) error {
+							databases, unknown := generate.NormalizeDatabases(c.String("driver"))
+							if len(unknown) > 0 {
+								return fmt.Errorf("unsupported database %q, expected any of %s",
+									strings.Join(unknown, ","), strings.Join(template.SupportedDatabases(), ", "))
+							}
+							if len(databases) == 0 {
+								return cli.ShowSubcommandHelp(c)
+							}
+							return newDatabaseGenerator().Init(databases)
+						},
+					},
+				},
+			},
+			{
 				Name:  "openapi",
 				Usage: "Generate an OpenAPI spec",
 				Flags: []cli.Flag{
@@ -235,7 +273,7 @@ func newApp() *cli.App {
 			&cli.StringFlag{
 				Name:        "driver",
 				Aliases:     []string{"d"},
-				Usage:       "-d mariadb",
+				Usage:       "-d mariadb (with -new: mariadb,mongodb,influxdb3; omit for a project without database code)",
 				Destination: &flags.Driver,
 			},
 			&cli.StringFlag{
@@ -255,18 +293,27 @@ func newApp() *cli.App {
 			if driver == "" && flags.Dsn != "" {
 				driver = dbdriver.DriverMysql
 			}
+			// When creating a project, -driver selects which database packages to
+			// scaffold; omitting it produces a project without any database code.
+			databases, unknown := generate.NormalizeDatabases(flags.Driver)
+			if flags.ProjectName != "" && len(unknown) > 0 {
+				return fmt.Errorf("unsupported database %q, expected any of %s",
+					strings.Join(unknown, ","), strings.Join(template.SupportedDatabases(), ", "))
+			}
+
 			opt := option.Options{
-				Project:  flags.Project(),
-				Module:   flags.Module(),
-				Package:  flags.Package(),
-				Feature:  flags.Feature(),
-				Shared:   flags.Shared(),
-				Spec:     flags.Spec,
-				Dsn:      flags.Dsn,
-				Table:    flags.Table,
-				Driver:   driver,
-				Orm:      flags.Orm,
-				Template: flags.Template,
+				Project:   flags.Project(),
+				Module:    flags.Module(),
+				Package:   flags.Package(),
+				Feature:   flags.Feature(),
+				Shared:    flags.Shared(),
+				Spec:      flags.Spec,
+				Dsn:       flags.Dsn,
+				Table:     flags.Table,
+				Driver:    driver,
+				Orm:       flags.Orm,
+				Template:  flags.Template,
+				Databases: databases,
 			}
 			return newGenerator().Generate(opt)
 		},

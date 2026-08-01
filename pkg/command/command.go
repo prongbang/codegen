@@ -48,10 +48,12 @@ func (*cmd) Run(name string, args ...string) (string, error) {
 
 	// Check if the command was successful
 	if err != nil {
-		// Print the standard error output
-		fmt.Printf("Error output: %s\n", command.Stderr)
+		// Print the combined output so the failure is visible, and return it so
+		// callers can inspect the reason (go mod tidy, for example, reports which
+		// modules clash).
+		fmt.Printf("Error output: %s\n", output)
 
-		return "", err
+		return string(output), err
 	}
 
 	return string(output), err

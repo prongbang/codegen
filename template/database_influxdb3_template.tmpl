@@ -1,0 +1,22 @@
+package database
+
+import (
+	"log"
+
+	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
+	"github.com/spf13/viper"
+)
+
+// NewInfluxDB3Client for create an InfluxDB 3 client
+func NewInfluxDB3Client() *influxdb3.Client {
+	client, err := influxdb3.New(influxdb3.ClientConfig{
+		Host:         viper.GetString("influxdb3.host"),
+		Token:        viper.GetString("influxdb3.token"),
+		Organization: viper.GetString("influxdb3.organization"),
+		Database:     viper.GetString("influxdb3.database"),
+	})
+	if err != nil {
+		log.Fatalf("Connecting to InfluxDB 3, %s", err)
+	}
+	return client
+}

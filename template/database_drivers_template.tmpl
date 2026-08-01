@@ -1,47 +1,105 @@
 package database
 
 import (
+{{- if .HasMongoDB }}
 	"context"
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	"github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
+{{- end }}
+{{- if .HasMariaDB }}
 	"github.com/innotechdevops/bun-driver/pkg/bundriver"
+{{- end }}
+{{- if .HasMongoDB }}
 	"github.com/innotechdevops/mgo-driver/pkg/mgodriver"
+{{- end }}
+{{- if .HasMariaDB }}
 	"github.com/uptrace/bun"
+{{- end }}
+{{- if .HasMongoDB }}
 	"go.mongodb.org/mongo-driver/mongo"
+{{- end }}
 )
 
 type Drivers interface {
+{{- if .HasMongoDB }}
 	GetMongoDB() *mongo.Database
+{{- end }}
+{{- if .HasMariaDB }}
 	GetMariaDB() *bun.DB
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	GetInfluxDB3() *influxdb3.Client
+{{- end }}
 	Close()
 }
 
 type drivers struct {
+{{- if .HasMongoDB }}
 	MongoDB     *mongo.Database
-	MariaDB     *bun.DB
 	MongoDriver mgodriver.MongoDriver
+{{- end }}
+{{- if .HasMariaDB }}
+	MariaDB     *bun.DB
 	MariaDriver bundriver.MariaDBDriver
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	InfluxDB3 *influxdb3.Client
+{{- end }}
 }
+{{- if .HasMongoDB }}
 
 func (d *drivers) GetMongoDB() *mongo.Database {
 	return d.MongoDB
 }
+{{- end }}
+{{- if .HasMariaDB }}
 
 func (d *drivers) GetMariaDB() *bun.DB {
 	return d.MariaDB
 }
+{{- end }}
+{{- if .HasInfluxDB3 }}
+
+func (d *drivers) GetInfluxDB3() *influxdb3.Client {
+	return d.InfluxDB3
+}
+{{- end }}
 
 func (d *drivers) Close() {
+{{- if .HasMongoDB }}
 	_ = d.MongoDB.Client().Disconnect(context.Background())
+{{- end }}
+{{- if .HasMariaDB }}
 	_ = d.MariaDB.Close()
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	_ = d.InfluxDB3.Close()
+{{- end }}
 }
 
 func NewDrivers(
+{{- if .HasMongoDB }}
 	mongoDriver mgodriver.MongoDriver,
+{{- end }}
+{{- if .HasMariaDB }}
 	mariaDriver bundriver.MariaDBDriver,
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	influxClient *influxdb3.Client,
+{{- end }}
 ) Drivers {
 	return &drivers{
+{{- if .HasMongoDB }}
 		MongoDB:     mongoDriver.Connect(),
 		MongoDriver: mongoDriver,
+{{- end }}
+{{- if .HasMariaDB }}
 		MariaDB:     mariaDriver.Connect(),
 		MariaDriver: mariaDriver,
+{{- end }}
+{{- if .HasInfluxDB3 }}
+		InfluxDB3: influxClient,
+{{- end }}
 	}
 }

@@ -4,8 +4,6 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
 	github.com/casbin/casbin/v2 v2.87.1
-	github.com/dreamph/dbre v1.0.12
-	github.com/dreamph/dbre/adapters/bun v0.0.0-20250117110957-5719d0128907
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gabriel-vasile/mimetype v1.4.3
 	github.com/go-playground/validator/v10 v10.22.1
@@ -13,10 +11,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/wire v0.6.0
-	github.com/innotechdevops/bun-driver v1.0.1
 	github.com/innotechdevops/core v1.0.3
-	github.com/innotechdevops/mgo-driver v1.0.0
-	github.com/innotechdevops/bun-driver v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/prongbang/callx v1.3.3
@@ -25,13 +20,22 @@ require (
 	github.com/prongbang/fiberresp v1.2.0
 	github.com/prongbang/goerror v1.0.1
 	github.com/prongbang/goredoc v1.1.0
-	github.com/prongbang/sqlbuilder v1.5.1
 	github.com/spf13/viper v1.10.1
 	github.com/swaggo/swag v1.16.4
-	github.com/uptrace/bun v1.2.10
 	github.com/urfave/cli/v2 v2.3.0
-	go.mongodb.org/mongo-driver v1.8.2
 	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
-	github.com/eclipse/paho.mqtt.golang v1.4.2
-	github.com/mochi-mqtt/server/v2 v2.7.9
+{{- if .HasMariaDB }}
+	github.com/dreamph/dbre v1.0.12
+	github.com/dreamph/dbre/adapters/bun v0.0.0-20250117110957-5719d0128907
+	github.com/innotechdevops/bun-driver v1.0.1
+	github.com/prongbang/sqlbuilder v1.5.1
+	github.com/uptrace/bun v1.2.10
+{{- end }}
+{{- if .HasMongoDB }}
+	github.com/innotechdevops/mgo-driver v1.0.0
+	go.mongodb.org/mongo-driver v1.8.2
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	github.com/InfluxCommunity/influxdb3-go/v2 v2.17.0
+{{- end }}
 )

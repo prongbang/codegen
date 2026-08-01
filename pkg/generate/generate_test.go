@@ -1339,12 +1339,76 @@ func TestGetProjectConfigContainsExpectedFiles(t *testing.T) {
 		"/tmp/demo/go.mod",
 		"/tmp/demo/cmd/api/main.go",
 		"/tmp/demo/internal/app/app.go",
-		"/tmp/demo/internal/database/mariadb.go",
 		"/tmp/demo/pkg/core/router.go",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing config path %s", want)
 		}
+	}
+
+	// Without -driver the project carries no database code at all.
+	if strings.Contains(joined, "/tmp/demo/internal/database/") {
+		t.Fatalf("expected no database files without a driver:\n%s", joined)
+	}
+}
+
+func TestGetProjectConfigIncludesSelectedDatabases(t *testing.T) {
+	configs := getProjectConfig("/tmp/demo", option.Options{
+		Project:   "demo",
+		Module:    "github.com/acme/demo",
+		Databases: []string{template.DatabaseMariaDB, template.DatabaseInfluxDB3},
+	})
+
+	paths := make([]string, 0, len(configs))
+	for _, cfg := range configs {
+		paths = append(paths, cfg.Path)
+	}
+	joined := strings.Join(paths, "\n")
+
+	for _, want := range []string{
+		"/tmp/demo/internal/database/drivers.go",
+		"/tmp/demo/internal/database/wire.go",
+		"/tmp/demo/internal/database/wire_gen.go",
+		"/tmp/demo/internal/database/mariadb.go",
+		// db.go adapts the bun connection, so it follows MariaDB.
+		"/tmp/demo/internal/database/db.go",
+		"/tmp/demo/internal/database/influxdb3.go",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("missing config path %s:\n%s", want, joined)
+		}
+	}
+
+	// MongoDB was not requested.
+	if strings.Contains(joined, "mongodb.go") {
+		t.Fatalf("unexpected mongodb file:\n%s", joined)
+	}
+}
+
+func TestNormalizeDatabases(t *testing.T) {
+	got, unknown := NormalizeDatabases("influxdb3, mariadb ,mariadb")
+	if len(unknown) != 0 {
+		t.Fatalf("unexpected unknown databases: %v", unknown)
+	}
+	// Deduplicated and in canonical order.
+	if strings.Join(got, ",") != "influxdb3,mariadb" {
+		t.Fatalf("unexpected databases: %v", got)
+	}
+
+	// mysql is an accepted alias for mariadb.
+	got, _ = NormalizeDatabases("mysql")
+	if strings.Join(got, ",") != template.DatabaseMariaDB {
+		t.Fatalf("expected mysql to map to mariadb, got %v", got)
+	}
+
+	// Empty means no database code.
+	got, unknown = NormalizeDatabases("")
+	if len(got) != 0 || len(unknown) != 0 {
+		t.Fatalf("expected no databases, got %v / %v", got, unknown)
+	}
+
+	if _, unknown = NormalizeDatabases("postgres"); len(unknown) != 1 {
+		t.Fatalf("expected postgres to be reported as unsupported, got %v", unknown)
 	}
 }
 
@@ -1354,7 +1418,7 @@ func TestGetGRPCProjectContextFindsRootFromAPIDir(t *testing.T) {
 	writeFile(t, filepath.Join(root, "internal", "app", "api", ".keep"), "")
 	chdir(t, filepath.Join(root, "internal", "app", "api"))
 
-	gotRoot, gotModule, err := getGRPCProjectContext(filex.NewFileX())
+	gotRoot, gotModule, err := getProjectContext(filex.NewFileX())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1371,7 +1435,7 @@ func TestGetGRPCProjectContextErrorsWithoutGoMod(t *testing.T) {
 	root := t.TempDir()
 	chdir(t, root)
 
-	_, _, err := getGRPCProjectContext(filex.NewFileX())
+	_, _, err := getProjectContext(filex.NewFileX())
 	if err == nil {
 		t.Fatal("expected missing go.mod error")
 	}
@@ -1405,3 +1469,72 @@ func TestGRPCGeneratorRunWirePropagatesErrors(t *testing.T) {
 }
 
 var _ command.Command = (*mockCommand)(nil)
+
+func TestTemplateDeltaDerivesDatabaseBlock(t *testing.T) {
+	// The delta of the go.mod template must be exactly the database's requires.
+	fragment, err := templateDelta(template.ModTemplate, template.DatabaseInfluxDB3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(fragment, "github.com/InfluxCommunity/influxdb3-go/v2") {
+		t.Fatalf("expected influxdb3 requirement in delta:\n%s", fragment)
+	}
+	if strings.Contains(fragment, "gofiber") {
+		t.Fatalf("delta leaked shared requirements:\n%s", fragment)
+	}
+
+	// The configuration delta must carry the struct field, not the whole file.
+	fragment, err = templateDelta(template.ConfigurationTemplate, template.DatabaseMariaDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(fragment, `mapstructure:"mariadb"`) {
+		t.Fatalf("expected mariadb struct in delta:\n%s", fragment)
+	}
+	if strings.Contains(fragment, "func Load(") {
+		t.Fatalf("delta leaked unrelated configuration code:\n%s", fragment)
+	}
+}
+
+func TestDatabaseModulesArePinned(t *testing.T) {
+	modules, err := databaseModules([]string{template.DatabaseMariaDB})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(modules) == 0 {
+		t.Fatal("expected mariadb modules")
+	}
+	for _, module := range modules {
+		if !strings.Contains(module, "@") {
+			t.Fatalf("expected a pinned version in %q", module)
+		}
+	}
+}
+
+func TestAmbiguousModuleExtractsOutdatedModule(t *testing.T) {
+	output := `go: demo/internal/database imports
+	google.golang.org/genproto/googleapis/rpc/status: ambiguous import: found package google.golang.org/genproto/googleapis/rpc/status in multiple modules:
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa (/tmp/a)
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa (/tmp/b)`
+	if got := ambiguousModule(output); got != "google.golang.org/genproto" {
+		t.Fatalf("unexpected module: %q", got)
+	}
+	if got := ambiguousModule("go: some other failure"); got != "" {
+		t.Fatalf("expected no module, got %q", got)
+	}
+}
+
+func TestMergeDatabasesKeepsExisting(t *testing.T) {
+	got := mergeDatabases([]string{template.DatabaseMongoDB}, []string{template.DatabaseInfluxDB3})
+	if strings.Join(got, ",") != "mariadb,mongodb,influxdb3"[8:] {
+		// canonical order is mariadb, mongodb, influxdb3
+		if strings.Join(got, ",") != "mongodb,influxdb3" {
+			t.Fatalf("unexpected merge: %v", got)
+		}
+	}
+	// Adding one the project already has changes nothing.
+	got = mergeDatabases([]string{template.DatabaseMariaDB}, []string{template.DatabaseMariaDB})
+	if strings.Join(got, ",") != template.DatabaseMariaDB {
+		t.Fatalf("unexpected merge: %v", got)
+	}
+}

@@ -8,8 +8,15 @@ package database
 // Injectors from wire.go:
 
 func NewDatabaseDriver() Drivers {
+{{- if .HasMongoDB }}
 	mongoDriver := NewMongoDBDriver()
+{{- end }}
+{{- if .HasMariaDB }}
 	mariaDriver := NewMariaDBDriver()
-	databaseDrivers := NewDrivers(mongoDriver, mariaDriver)
+{{- end }}
+{{- if .HasInfluxDB3 }}
+	influxClient := NewInfluxDB3Client()
+{{- end }}
+	databaseDrivers := NewDrivers({{if .HasMongoDB}}mongoDriver{{end}}{{if and .HasMongoDB .HasMariaDB}}, {{end}}{{if .HasMariaDB}}mariaDriver{{end}}{{if and (or .HasMongoDB .HasMariaDB) .HasInfluxDB3}}, {{end}}{{if .HasInfluxDB3}}influxClient{{end}})
 	return databaseDrivers
 }

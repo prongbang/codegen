@@ -63,6 +63,18 @@ codegen -new test_project -mod github.com/prongbang
 Parameters:
 - `-new`: Project name
 - `-mod`: Module name
+- `-d`, `-driver`: *(optional)* databases to scaffold — `mariadb`, `mongodb`, `influxdb3`.
+  Separate several with a comma. **Omit it and the project is generated with no
+  database code at all**; you can add one later with `codegen database init`.
+
+```shell
+# no database code
+codegen -new test_project -mod github.com/prongbang
+
+# with one or more databases
+codegen -new test_project -mod github.com/prongbang -d mariadb
+codegen -new test_project -mod github.com/prongbang -d mariadb,influxdb3
+```
 
 This creates the following structure:
 
@@ -99,11 +111,12 @@ This creates the following structure:
 │     │     │     │     └── usecase.go
 │     │     │     └── routers.go
 │     │     └── app.go
-│     ├── database
-│     │     ├── db.go
+│     ├── database          # only with -d; one file per selected database
+│     │     ├── db.go       # -d mariadb
 │     │     ├── drivers.go
-│     │     ├── mariadb.go
-│     │     ├── mongodb.go
+│     │     ├── mariadb.go  # -d mariadb
+│     │     ├── mongodb.go  # -d mongodb
+│     │     ├── influxdb3.go # -d influxdb3
 │     │     ├── wire.go
 │     │     └── wire_gen.go
 │     ├── middleware
@@ -195,6 +208,34 @@ upstream MQTT broker and forwards messages to a built-in (mochi) MQTT server:
 
 After generating, run `go mod tidy` inside the project, then start it with
 `make run` (or `go run cmd/api/main.go -env development`).
+
+### Add a Database Later
+
+A project created without `-d` has no database code. Add one at any time:
+
+```shell
+codegen database init -d mariadb
+codegen database init -d influxdb3
+codegen database init -d mariadb,mongodb,influxdb3
+```
+
+Supported: `mariadb`, `mongodb`, `influxdb3`.
+
+This generates `internal/database` for the selected databases and wires them in:
+
+- adds the driver files and regenerates `internal/database/drivers.go`
+- gives `CreateApp` its `database.Drivers` parameter in `wire.go` / `wire_gen.go`
+- makes `cmd/api/main.go` build and close the driver
+- appends the config struct and the `development.yml` / `production.yml` sections
+- resolves the dependencies and runs `go mod tidy` + `wire`
+
+Running it again for a database that is already set up does nothing, and adding a
+second database keeps the existing one:
+
+```shell
+codegen database init -d mongodb     # project now has mongodb
+codegen database init -d influxdb3   # project now has mongodb + influxdb3
+```
 
 ### 1.1 Initial gRPC
 

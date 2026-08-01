@@ -18,22 +18,24 @@ type FileConfig struct {
 }
 
 func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
-	return []FileConfig{
+	data := template.Project{Module: opt.Module, Name: opt.Project, Databases: opt.Databases}
+
+	configs := []FileConfig{
 		// Root level files
 		{
 			Path:     fmt.Sprintf("%s/go.mod", currentDir),
 			Template: template.ModTemplate,
-			Data:     template.Project{Module: opt.Module},
+			Data:     data,
 		},
 		{
 			Path:     fmt.Sprintf("%s/wire.go", currentDir),
 			Template: template.WireTemplate,
-			Data:     template.Project{Module: opt.Module, Name: opt.Project},
+			Data:     data,
 		},
 		{
 			Path:     fmt.Sprintf("%s/wire_gen.go", currentDir),
 			Template: template.WireGenTemplate,
-			Data:     template.Project{Module: opt.Module, Name: opt.Project},
+			Data:     data,
 		},
 		{
 			Path:     fmt.Sprintf("%s/Makefile", currentDir),
@@ -44,7 +46,7 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 		{
 			Path:     fmt.Sprintf("%s/cmd/api/main.go", currentDir),
 			Template: template.CmdMainTemplate,
-			Data:     template.Project{Name: opt.Project, Module: opt.Module},
+			Data:     data,
 		},
 
 		// Docs files
@@ -117,33 +119,6 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 		{
 			Path:     fmt.Sprintf("%s/internal/app/api/health/usecase.go", currentDir),
 			Template: template.HealthUseCaseTemplate,
-		},
-
-		// Database files
-		{
-			Path:     fmt.Sprintf("%s/internal/database/db.go", currentDir),
-			Template: template.DatabaseDbTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/database/drivers.go", currentDir),
-			Template: template.DatabaseDriversTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/database/mongodb.go", currentDir),
-			Template: template.DatabaseMongoDBTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/database/mariadb.go", currentDir),
-			Template: template.DatabaseMariaDBTemplate,
-			Data:     template.Project{Module: opt.Module},
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/database/wire.go", currentDir),
-			Template: template.DatabaseWireTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/internal/database/wire_gen.go", currentDir),
-			Template: template.DatabaseWireGenTemplate,
 		},
 
 		// Deployment files
@@ -249,6 +224,7 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 		{
 			Path:     fmt.Sprintf("%s/configuration/configuration.go", currentDir),
 			Template: template.ConfigurationTemplate,
+			Data:     data,
 		},
 		{
 			Path:     fmt.Sprintf("%s/configuration/environment.go", currentDir),
@@ -257,10 +233,12 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 		{
 			Path:     fmt.Sprintf("%s/configuration/development.yml", currentDir),
 			Template: template.ConfigurationDevelopmentTemplate,
+			Data:     data,
 		},
 		{
 			Path:     fmt.Sprintf("%s/configuration/production.yml", currentDir),
 			Template: template.ConfigurationProductionTemplate,
+			Data:     data,
 		},
 
 		// Internal package files
@@ -277,6 +255,10 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 			Template: template.InternalPkgValidatorTemplate,
 		},
 	}
+
+	configs = append(configs, getDatabaseConfig(currentDir, data)...)
+
+	return configs
 }
 
 type projectGenerator struct {

@@ -149,6 +149,9 @@ var DatabaseMongoDBTemplate string
 //go:embed database_mariadb_template.tmpl
 var DatabaseMariaDBTemplate string
 
+//go:embed database_influxdb3_template.tmpl
+var DatabaseInfluxDB3Template string
+
 //go:embed database_wire_gen_template.tmpl
 var DatabaseWireGenTemplate string
 
@@ -430,6 +433,19 @@ type PrimaryField struct {
 	JsonTag string
 }
 
+// Database names accepted by -d/-driver when creating a project and by
+// "codegen database init".
+const (
+	DatabaseMariaDB   = "mariadb"
+	DatabaseMongoDB   = "mongodb"
+	DatabaseInfluxDB3 = "influxdb3"
+)
+
+// SupportedDatabases lists every database the project scaffold can generate.
+func SupportedDatabases() []string {
+	return []string{DatabaseMariaDB, DatabaseMongoDB, DatabaseInfluxDB3}
+}
+
 type Project struct {
 	Imports      []string
 	Fields       []Field
@@ -443,6 +459,35 @@ type Project struct {
 	PrimaryField PrimaryField
 	Driver       string
 	Table        string
+	// Databases selected for the project. Empty means the project is generated
+	// without any database code.
+	Databases []string
+}
+
+func (w Project) hasDatabase(name string) bool {
+	for _, db := range w.Databases {
+		if db == name {
+			return true
+		}
+	}
+	return false
+}
+
+// HasDatabase reports whether the project includes any database code.
+func (w Project) HasDatabase() bool {
+	return len(w.Databases) > 0
+}
+
+func (w Project) HasMariaDB() bool {
+	return w.hasDatabase(DatabaseMariaDB)
+}
+
+func (w Project) HasMongoDB() bool {
+	return w.hasDatabase(DatabaseMongoDB)
+}
+
+func (w Project) HasInfluxDB3() bool {
+	return w.hasDatabase(DatabaseInfluxDB3)
 }
 
 func (w Project) DriverName() string {

@@ -17,6 +17,8 @@ type Options struct {
 	Orm       string
 	Framework string
 	Template  string
+	// Databases selected for a new project (empty means no database code).
+	Databases []string
 	OpenAPI   bool
 	Patterns  []string
 }
