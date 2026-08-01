@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	swagger "github.com/arsmn/fiber-swagger/v2"
 	gojson "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -13,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/prongbang/fiberresp"
-	"github.com/prongbang/goredoc"
+	"github.com/prongbang/goscalar"
 	"{{.Module}}/configuration"
 	"{{.Module}}/internal/middleware"
 	"{{.Module}}/internal/pkg/casbinx"
@@ -73,18 +72,15 @@ func (a *api) Register() {
 	}))
 
 	if configuration.Config.Env != configuration.EnvProduction {
-		conf := swagger.ConfigDefault
-		conf.PersistAuthorization = true
-		conf.DisplayRequestDuration = true
-		conf.Filter = swagger.FilterConfig{
-			Enabled: true,
-		}
-		doc := goredoc.New(goredoc.Config{
-			Title:   "API Documentation",
-			SpecURL: "/swagger/doc.json",
+		// Generate the spec with `make openapi-gen`.
+		doc := goscalar.New(goscalar.Config{
+			Title:    "API Documentation",
+			SpecPath: "docs/openapi.json",
 		})
-		app.Get("/docs", adaptor.HTTPHandlerFunc(doc.Handler()))
-		app.Use("/swagger", swagger.HandlerDefault)
+		handler := adaptor.HTTPHandlerFunc(doc.Handler())
+		app.Get("/docs", handler)
+		// goscalar serves the spec itself when SpecPath is set.
+		app.Get("/docs/openapi.json", handler)
 	}
 	app.Use(middleware.NewJWT(a.Response))
 	app.Use(casbinx.New())
@@ -99,7 +95,7 @@ func (a *api) Register() {
 
 	// Serve
 	go func() {
-		log.Info(fmt.Sprintf("Swagger URL : http://localhost:%d/docs", configuration.Config.API.Port))
+		log.Info(fmt.Sprintf("API Docs URL : http://localhost:%d/docs", configuration.Config.API.Port))
 		log.Fatal(app.Listen(fmt.Sprintf(":%d", configuration.Config.API.Port)))
 	}()
 

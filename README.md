@@ -18,7 +18,7 @@
 - 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
 - 🔌 **Optional Database** - Projects are generated without database code unless you ask for it; MariaDB, MongoDB and InfluxDB 3 can be added at any time
 - 📡 **MQTT Template** - Scaffold an MQTT forward service instead of a REST API
-- 🛠️ **Open API Generation** - Generate Open API without configuration
+- 🛠️ **OpenAPI + Scalar** - Generate the OpenAPI spec from the routes and browse it with [Scalar](https://github.com/prongbang/goscalar) at `/docs`
 - 🧩 **Modular Design** - Feature-based modules for better organization
 - 🔧 **Wire Integration** - Dependency injection with Google Wire
 - ⚡ **Fast Development** - Speed up your development workflow
@@ -136,10 +136,7 @@ This creates the following structure:
 │     ├── Dockerfile
 │     └── api-prod.yml
 ├── docs
-│     └── apispec
-│         ├── docs.go
-│         ├── swagger.json
-│         └── swagger.yaml
+│     └── openapi.json      # served by Scalar at /docs; regenerate with `make openapi-gen`
 ├── go.mod
 ├── go.sum
 ├── internal
@@ -414,7 +411,7 @@ test-project/internal/app/api/promotion
 └── usecase.go
 ```
 
-### 3. Generate Features CRUD and Swagger from JSON Spec
+### 3. Generate Features CRUD from JSON Spec
 
 Generate CRUD operations from JSON specifications:
 

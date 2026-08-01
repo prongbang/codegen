@@ -2,7 +2,6 @@ package main
 
 import (
 	"{{.Module}}/configuration"
-	_ "{{.Module}}/docs/apispec"
 	{{.PackageName}} "{{.Module}}"
 {{- if .HasDatabase }}
 	"{{.Module}}/internal/database"
@@ -14,21 +13,10 @@ import (
 	_ "time/tzdata"
 )
 
-// @title {{.ProjectName}} API
-// @version 1.0
-// @description This is a swagger for {{.ProjectName}} API
-// @termsOfService https://swagger.io/terms/
-// @contact.name API Support
-// @contact.url https://company.com/support
-// @contact.email info@company.com
-// @host localhost:9001
-// @BasePath /
-// @securityDefinitions.apikey APIKeyAuth
-// @in header
-// @name X-API-KEY
-// @securityDefinitions.apikey JWTAuth
-// @in header
-// @name Authorization
+// {{.ProjectName}} API.
+//
+// The OpenAPI spec is generated from the routes with `make openapi-gen` and
+// served by Scalar at /docs.
 func main() {
 	app := &cli.App{
 		Flags: []cli.Flag{

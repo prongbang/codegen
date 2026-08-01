@@ -128,14 +128,8 @@ var DeploymentsDockerfileTemplate string
 
 // Documentation
 
-//go:embed docs_swagger_json_template.tmpl
-var DocsSwaggerJSONTemplate string
-
-//go:embed docs_swagger_yaml_template.tmpl
-var DocsSwaggerYAMLTemplate string
-
-//go:embed docs_template.tmpl
-var DocsTemplate string
+//go:embed docs_openapi_json_template.tmpl
+var DocsOpenAPIJSONTemplate string
 
 // Internal Packages
 

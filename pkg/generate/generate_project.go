@@ -51,16 +51,9 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 
 		// Docs files
 		{
-			Path:     fmt.Sprintf("%s/docs/apispec/docs.go", currentDir),
-			Template: template.DocsTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/docs/apispec/swagger.json", currentDir),
-			Template: template.DocsSwaggerJSONTemplate,
-		},
-		{
-			Path:     fmt.Sprintf("%s/docs/apispec/swagger.yaml", currentDir),
-			Template: template.DocsSwaggerYAMLTemplate,
+			Path:     fmt.Sprintf("%s/docs/openapi.json", currentDir),
+			Template: template.DocsOpenAPIJSONTemplate,
+			Data:     data,
 		},
 
 		// Middleware files
