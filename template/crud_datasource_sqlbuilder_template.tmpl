@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/innotechdevops/core/pointer"
 	"github.com/prongbang/goerror"
 	"github.com/prongbang/sqlbuilder"
 	"{{.Module}}/internal/pkg/response"
+	"{{.Module}}/pkg/collection"
 	"{{.Module}}/pkg/core"
 	"{{.Module}}/internal/database"
 )
@@ -44,7 +46,7 @@ func (d *dataSource) FindList(ctx context.Context, obj *List{{.ModelName}}Criter
 
 	// Query: count
 	countStatement := fmt.Sprintf("SELECT COUNT(1) FROM (%s) AS t", queryBuilder.ToSQL())
-	err := conn.GetContext(ctx, &total, countStatement, queryBuilder.Args()...)
+	err := conn.NewRaw(countStatement, queryBuilder.Args()...).Scan(ctx, &total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -72,7 +74,7 @@ func (d *dataSource) FindList(ctx context.Context, obj *List{{.ModelName}}Criter
 		// Paged
 		queryBuilder.WithPagination(obj.Page, obj.Limit)
 
-		err = conn.SelectContext(ctx, result, queryBuilder.ToSQL(), queryBuilder.Args()...)
+		err = conn.NewRaw(queryBuilder.ToSQL(), queryBuilder.Args()...).Scan(ctx, result)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -96,7 +98,7 @@ func (d *dataSource) FindLiteList(ctx context.Context, obj *LiteList{{.ModelName
 	// Where
 	queryBuilder.WhereAnd("1 = 1")
 
-	err := conn.SelectContext(ctx, result, queryBuilder.ToSQL(), queryBuilder.Args()...)
+	err := conn.NewRaw(queryBuilder.ToSQL(), queryBuilder.Args()...).Scan(ctx, result)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,7 @@ func (d *dataSource) FindOne(ctx context.Context, obj *One{{.ModelName}}Criteria
 	// Where
     queryBuilder.WhereAnd("{{.Alias}}.id = ?", obj.Id)
 
-    err := conn.SelectContext(ctx, result, queryBuilder.ToSQL(), queryBuilder.Args()...)
+    err := conn.NewRaw(queryBuilder.ToSQL(), queryBuilder.Args()...).Scan(ctx, result)
 	if err != nil {
 		return nil, err
 	}

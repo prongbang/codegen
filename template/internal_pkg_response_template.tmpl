@@ -80,6 +80,31 @@ func NewDeleteError() error {
 	}
 }
 
+type LastInsertIdError struct {
+	goerror.Body
+	cause error
+}
+
+// Error implements error.
+func (c *LastInsertIdError) Error() string {
+	return c.Message
+}
+
+// Unwrap exposes the underlying driver error for logging without leaking it in the response body.
+func (c *LastInsertIdError) Unwrap() error {
+	return c.cause
+}
+
+func NewLastInsertIdError(cause error) error {
+	return &LastInsertIdError{
+		Body: goerror.Body{
+			Code:    "DTB005",
+			Message: "Failed to read the last insert id",
+		},
+		cause: cause,
+	}
+}
+
 type DataInvalidError struct {
 	goerror.Body
 }
@@ -104,7 +129,7 @@ type customResponse struct {
 // Response implements response.Custom.
 func (c *customResponse) Response(ctx *fiber.Ctx, err error) error {
 	switch resp := err.(type) {
-	case *UpdateError, *DeleteError, *CommitError, *InsertError, *DataInvalidError:
+	case *UpdateError, *DeleteError, *CommitError, *InsertError, *DataInvalidError, *LastInsertIdError:
 		return ctx.Status(http.StatusBadRequest).JSON(resp)
 	}
 	return nil
