@@ -10,7 +10,9 @@ import (
 	"{{.Module}}/internal/pkg/response"
 	"github.com/innotechdevops/core/collectionx"
 	"github.com/innotechdevops/core"
+{{- if eq .PrimaryField.Type "string" }}
 	"github.com/innotechdevops/core/uuidx"
+{{- end }}
 	"{{.Module}}/internal/database"
 )
 
