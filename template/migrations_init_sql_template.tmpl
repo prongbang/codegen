@@ -1,0 +1,6 @@
+-- Baseline no-op migration. Keeps the sql/ embed non-empty (//go:embed fails
+-- to build when the glob matches nothing) and proves the runner end-to-end.
+--
+-- New migrations go in this directory as <version>_<name>.up.sql — create one
+-- with "codegen migration new <name>". See ../README.md.
+SELECT 1;

@@ -1,0 +1,131 @@
+package database
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"log/slog"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/uptrace/bun/migrate"
+	migrationsrc "{{.Module}}/migrations"
+)
+
+// Ledger and lock table names. bun's defaults are bun_migrations and
+// bun_migration_locks; these read better next to the application's own tables.
+const (
+	migrationsTable      = "migrations"
+	migrationsLocksTable = "migrations_locks"
+)
+
+// migrationTimeout bounds a whole migration run.
+const migrationTimeout = 5 * time.Minute
+
+// StartupMigrations applies pending migrations at boot, reusing the
+// already-connected MariaDB from the driver set. Any failure is fatal: the
+// process exits before the API starts, so it never serves traffic against a
+// half-migrated schema.
+//
+// Migrations run on every boot. RUN_MIGRATIONS is an opt-out — set it to a
+// false value (false, 0, f) on a replica that must never touch the schema.
+func StartupMigrations(dbDriver Drivers) {
+	if !migrationsEnabled() {
+		slog.Info("migrations: skipped, RUN_MIGRATIONS is false")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), migrationTimeout)
+	defer cancel()
+
+	if err := Migrate(ctx, dbDriver); err != nil {
+		log.Fatal("migrations: ", err)
+	}
+}
+
+// migrationsEnabled reads the RUN_MIGRATIONS opt-out. Unset, empty, or
+// unparsable means run — only an explicitly false value skips.
+func migrationsEnabled() bool {
+	raw := os.Getenv("RUN_MIGRATIONS")
+	if raw == "" {
+		return true
+	}
+	enabled, err := strconv.ParseBool(raw)
+	if err != nil {
+		return true
+	}
+	return enabled
+}
+
+// Migrate discovers the embedded SQL files and applies the ones missing from
+// the ledger, under bun's lock so concurrent replicas cannot race.
+func Migrate(ctx context.Context, dbDriver Drivers) error {
+	m, err := newMigrator(dbDriver)
+	if err != nil {
+		return err
+	}
+	if err := m.Init(ctx); err != nil {
+		return fmt.Errorf("init: %w", err)
+	}
+	if err := m.Lock(ctx); err != nil {
+		return fmt.Errorf("lock: %w", err)
+	}
+	defer func() { _ = m.Unlock(ctx) }()
+
+	group, err := m.Migrate(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	if group.IsZero() {
+		slog.Info("migrations: nothing to apply")
+		return nil
+	}
+	slog.Info("migrations: applied", "group", group.ID, "migrations", group.Migrations.String())
+	return nil
+}
+
+// MigrationStatus logs every migration with its applied/pending state.
+func MigrationStatus(ctx context.Context, dbDriver Drivers) (migrate.MigrationSlice, error) {
+	m, err := newMigrator(dbDriver)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Init(ctx); err != nil {
+		return nil, fmt.Errorf("init: %w", err)
+	}
+	ms, err := m.MigrationsWithStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("status: %w", err)
+	}
+	for i := range ms {
+		state := "pending"
+		if ms[i].IsApplied() {
+			state = "applied group=" + fmt.Sprint(ms[i].GroupID)
+		}
+		slog.Info("migrations: migration", "version", ms[i].Name, "name", ms[i].Comment, "state", state)
+	}
+	return ms, nil
+}
+
+func newMigrator(dbDriver Drivers) (*migrate.Migrator, error) {
+	ms := migrate.NewMigrations()
+	if err := ms.Discover(migrationsrc.FS); err != nil {
+		return nil, fmt.Errorf("discover: %w", err)
+	}
+	return migrate.NewMigrator(dbDriver.GetMariaDB(), ms,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationsLocksTable),
+		// Record a migration only AFTER its SQL succeeds. bun's default marks it
+		// applied BEFORE running, so a file that fails halfway is remembered as a
+		// success and never retried — the schema stays half-migrated with no
+		// failing migration to point at.
+		//
+		// With this on, a failed migration stays unapplied and is retried on the
+		// next boot. That is only safe because every file is written to survive
+		// being re-run from its first statement (DDL auto-commits on MySQL, so a
+		// retry starts from statement 1 against a partly-migrated database). See
+		// migrations/README.md.
+		migrate.WithMarkAppliedOnSuccess(true),
+	), nil
+}

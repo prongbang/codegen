@@ -1,0 +1,20 @@
+-- =============================================================================
+-- {{.Name}}  ({{.Version}})
+--
+-- WHAT: <one line on what this file changes and which Go feature it backs>
+--
+-- EXISTING DATA: <additive only? rows rewritten? nothing read/updated/deleted?>
+--
+-- Idempotent: safe to re-run from the first statement. A failed migration is
+-- NOT recorded and IS retried on the next boot, and DDL auto-commits on MySQL,
+-- so every statement must tolerate the earlier ones having already landed.
+--
+-- Separate every statement with a line containing exactly `--bun:split`. The
+-- runner sends each chunk as a single query; two statements in one chunk fail
+-- with errno 1064.
+--
+-- ROLLBACK (manual, review before running — migrations are forward-only):
+--   <the statements an operator would run, children before parents>
+-- =============================================================================
+
+SELECT 1;

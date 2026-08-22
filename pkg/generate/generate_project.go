@@ -180,6 +180,7 @@ func getProjectConfig(currentDir string, opt option.Options) []FileConfig {
 	}
 
 	configs = append(configs, getDatabaseConfig(currentDir, data)...)
+	configs = append(configs, getMigrationConfig(currentDir, data)...)
 
 	return configs
 }

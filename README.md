@@ -17,6 +17,7 @@
 - 🔄 **CRUD Generation** - Generate CRUD operations from JSON specifications
 - 🗄️ **Database Schema Generation** - Generate CRUD directly from a live MySQL/MariaDB schema
 - 🔌 **Optional Database** - Projects are generated without database code unless you ask for it; MariaDB, MongoDB and InfluxDB 3 can be added at any time
+- 🧬 **SQL Migrations** - MariaDB projects ship a bun-backed migration runner that applies embedded SQL files on boot
 - 📡 **MQTT Template** - Scaffold an MQTT forward service instead of a REST API
 - 🛠️ **OpenAPI + Scalar** - Generate the OpenAPI spec from the routes and browse it with [Scalar](https://github.com/prongbang/goscalar) at `/docs`
 - 🧩 **Modular Design** - Feature-based modules for better organization
@@ -59,6 +60,8 @@ go install github.com/prongbang/codegen@v1.7.0
 |---|---|
 | `codegen -new <name> -mod <module>` | Create a new project |
 | `codegen database init -d <databases>` | Add database code to an existing project |
+| `codegen migration init` | Add the startup migration runner to an existing MariaDB project |
+| `codegen migration new <name>` | Create the next migration file under `migrations/sql` |
 | `codegen grpc init` | Add the gRPC scaffold |
 | `codegen grpc server --new <service>` | Generate a gRPC server |
 | `codegen grpc client --new <thirdparty>/<service>` | Generate a gRPC client |
@@ -246,7 +249,8 @@ Supported: `mariadb`, `mongodb`, `influxdb3`.
 |---|---|
 | `internal/database/*.go` | Driver for each selected database, plus `drivers.go`, `wire.go`, `wire_gen.go` |
 | `wire.go`, `wire_gen.go` | `CreateApp` gains its `database.Drivers` parameter |
-| `cmd/api/main.go` | Builds the driver and closes it on shutdown |
+| `cmd/api/main.go` | Builds the driver, closes it on shutdown, and runs migrations (MariaDB) |
+| `migrations/`, `internal/database/migrations.go` | Migration runner and its SQL directory (MariaDB only) |
 | `configuration/configuration.go` | Config struct fields for each database |
 | `configuration/development.yml`, `production.yml` | Connection settings to fill in |
 | `go.mod` | Database dependencies, then `go mod tidy` + `wire` |
@@ -324,6 +328,67 @@ driver.GetInfluxDB3() // *influxdb3.Client (-d influxdb3)
 > Only the databases you selected have a getter — `drivers.go` is generated from
 > the selected set, so asking for one you did not add is a compile error rather
 > than a nil connection at runtime.
+
+### Database Migrations
+
+A project with MariaDB ships a migration runner. SQL files live in
+`migrations/sql`, are embedded into the binary, and are applied at boot by
+`database.StartupMigrations(dbDriver)` in `cmd/api/main.go`.
+
+```
+migrations/
+├── embed.go                  //go:embed sql/*.sql
+├── README.md                 the conventions, generated with the project
+└── sql/
+    └── 0001_init.up.sql      no-op baseline, keeps the embed non-empty
+internal/database/migrations.go   the runner (bun/migrate)
+```
+
+Create the next migration — run this **from the project root**:
+
+```shell
+codegen migration new master_room_setup
+# → migrations/sql/0002_master_room_setup.up.sql
+```
+
+It picks the next free version, matches the zero-padding already in use, and
+writes a skeleton with the rules in its header. Fill it in and rebuild — the
+runner only sees files compiled into the binary.
+
+Projects that already have MariaDB but predate the runner get it with:
+
+```shell
+codegen migration init
+```
+
+That writes the four files above and adds the `StartupMigrations` call to
+`cmd/api/main.go`. It never overwrites a file that already exists, so it is safe
+to re-run.
+
+#### How it behaves at runtime
+
+- **Every boot.** `RUN_MIGRATIONS=false` (or `0`, `f`) opts out — for a replica
+  that must never touch the schema.
+- **Fail-fast.** Any error exits the process before the API starts, bounded by a
+  5-minute timeout.
+- **Locked.** bun holds a lock in `migrations_locks`, so concurrent replicas
+  cannot race. Applied versions are recorded in `migrations`.
+- **Retried on failure.** A migration is recorded only *after* its SQL succeeds,
+  so a failed one runs again next boot. That is why every file must be
+  idempotent and survive being re-run from its first statement.
+
+#### Writing one
+
+Two rules the generated `migrations/README.md` covers in full, and that are not
+style preferences:
+
+- **Separate every statement with a line containing exactly `--bun:split`.** Each
+  chunk is sent as one query; two statements in a chunk fail with errno 1064.
+- **`ADD COLUMN IF NOT EXISTS` is MariaDB-only** and a syntax error on MySQL.
+  Guard through `information_schema` plus `PREPARE`/`EXECUTE` instead.
+
+Append `.tx` before the suffix — `0002_seed.tx.up.sql` — to run a file inside a
+transaction. Useful for DML; DDL auto-commits regardless.
 
 ### 1.1 Initial gRPC
 

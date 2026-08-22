@@ -80,6 +80,10 @@ func newDatabaseGenerator() generate.DatabaseGenerator {
 	return generate.NewDatabaseGenerator(fileX, cmd, tools.NewWireInstaller(cmd), tools.NewWireRunner(cmd))
 }
 
+func newMigrationGenerator() generate.MigrationGenerator {
+	return generate.NewMigrationGenerator(filex.NewFileX())
+}
+
 func newGenerator() generate.Generator {
 	cmd := command.New()
 	arc := arch.New()
@@ -195,6 +199,34 @@ func newApp() *cli.App {
 								return cli.ShowSubcommandHelp(c)
 							}
 							return newDatabaseGenerator().Init(databases)
+						},
+					},
+				},
+			},
+			{
+				Name:  "migration",
+				Usage: "Database migration utilities",
+				Action: func(c *cli.Context) error {
+					return cli.ShowSubcommandHelp(c)
+				},
+				Subcommands: []*cli.Command{
+					{
+						Name:  "init",
+						Usage: "Add the startup migration runner to an existing project (requires MariaDB)",
+						Action: func(*cli.Context) error {
+							return newMigrationGenerator().Init()
+						},
+					},
+					{
+						Name:      "new",
+						Usage:     "Create the next migration file, e.g. codegen migration new master_room_setup",
+						ArgsUsage: "<name>",
+						Action: func(c *cli.Context) error {
+							name := c.Args().First()
+							if name == "" {
+								return cli.ShowSubcommandHelp(c)
+							}
+							return newMigrationGenerator().New(name)
 						},
 					},
 				},

@@ -1,0 +1,15 @@
+// Package migrations embeds the SQL migration files so the API binary can
+// apply them at startup (see internal/database/migrations.go).
+//
+// Files live in sql/ and are named <version>_<name>.up.sql (with an optional
+// .tx. marker for transactional files); a matching .down.sql is embedded too
+// but is only ever run by hand. Add one with "codegen migration new <name>".
+// Adding a file requires a rebuild for the startup runner to see it; applying
+// it by hand with a SQL client remains fully supported. See README.md for the
+// full convention.
+package migrations
+
+import "embed"
+
+//go:embed sql/*.sql
+var FS embed.FS

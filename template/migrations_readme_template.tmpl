@@ -1,0 +1,159 @@
+# Database Migrations
+
+SQL migration files for this service. They live in `sql/`, are embedded into
+the API binary (`//go:embed sql/*.sql` in `embed.go`) and are applied at
+startup by `internal/database/migrations.go`.
+
+## Create one
+
+```bash
+codegen migration new master_room_setup
+```
+
+That writes the next free version into `sql/` with the skeleton filled in.
+
+## Filename convention
+
+```
+<version>_<name>.up.sql        forward migration             — RUN
+<version>_<name>.down.sql      its manual reverse            — never run automatically
+<version>_<name>.tx.up.sql     forward, inside a transaction — RUN
+<version>_<name>.tx.down.sql   reverse, inside a transaction — never run automatically
+```
+
+- `<version>` — a zero-padded sequence (`0001`, `0002`, …). Files run in
+  ascending version order. Use the next free number.
+- `<name>` — lowercase snake_case, `[0-9a-z_-]+`. bun rejects anything else.
+- `.up.sql` is **required** for a file to run. A `.down.sql` is optional and
+  exists purely so an operator can run it by hand.
+- **Wrong suffix = the file never runs**, silently. `0002_add_column.sql` is
+  not a migration.
+
+## How it runs
+
+`cmd/api/main.go` calls `database.StartupMigrations(dbDriver)` right after the
+driver connects and before the API starts:
+
+```go
+dbDriver := database.NewDatabaseDriver()
+defer dbDriver.Close()
+
+// Database migrations (always on; RUN_MIGRATIONS=false opts out).
+database.StartupMigrations(dbDriver)
+```
+
+- **Every boot.** `RUN_MIGRATIONS` is an opt-out: set it to `false`, `0` or `f`
+  to skip the runner — for example on a replica that must never touch the
+  schema. Unset, empty, or any other value runs migrations.
+- **Fail-fast.** Any error exits the process before the API starts, so it never
+  serves traffic against a half-migrated schema. The run is bounded by a
+  5-minute timeout.
+- **Locked.** bun takes a lock in `migrations_locks`, so concurrent replicas
+  booting at once cannot race.
+- **Discovery.** Files are embedded at build time, so a new file needs a
+  rebuild before the startup runner sees it. Applying it by hand with a SQL
+  client works immediately regardless.
+- **The ledger** is the `migrations` table, keyed on the version. It records no
+  checksum: editing an already-applied file does nothing on databases that ran
+  it. Express a change of intent as a **new** file.
+
+## Three rules that are not style preferences
+
+### 1. `--bun:split` is REQUIRED between statements
+
+The runner sends each chunk between two `--bun:split` lines as a **single**
+query, and the DSN carries no `multiStatements=true`. Two statements in one
+chunk are rejected by the driver with **errno 1064** before the server sees
+them.
+
+Write the directive **exactly** `--bun:split`. bun aborts the whole migration
+on any other `--bun:` line, including `--bun: split`.
+
+All statements in one file run on the same pinned connection, so session state
+(`SET @var`, `PREPARE`/`EXECUTE`, `FOREIGN_KEY_CHECKS`) carries across splits.
+
+### 2. Every migration must survive being re-run from its first statement
+
+A migration that fails is **not** written to the ledger and **is retried on the
+next boot** (`WithMarkAppliedOnSuccess(true)`). Because DDL auto-commits on
+MySQL, that retry starts from statement 1 against a database where the earlier
+statements already landed. So:
+
+- Prefer `CREATE TABLE IF NOT EXISTS`, `DROP TABLE IF EXISTS` and
+  `INSERT ... ON DUPLICATE KEY UPDATE`; never a bare `ALTER` or `INSERT`.
+- Guard on the **current shape**, not on mere existence, whenever a statement
+  recreates something under a name it also removes.
+- A destructive statement (`DELETE`, `DROP`) must be guarded on a condition
+  that its own success makes permanently false.
+
+### 3. Never `DROP INDEX` on its own if that index covers a foreign key
+
+MySQL requires every FK column to have an index whose leftmost prefix is that
+column. If the index you are dropping is the only one that qualifies, the drop
+is refused with `ERROR 1553`. Do the drop and the add in **one** `ALTER`:
+
+```sql
+-- WRONG — two statements. The first fails with 1553, the second never runs.
+ALTER TABLE `device` DROP INDEX `uq_device_identity`;
+ALTER TABLE `device` ADD UNIQUE KEY `uq_device_identity` (`site_id`, `device_ip`);
+
+-- RIGHT — one statement. MySQL checks FK coverage against the final shape.
+ALTER TABLE `device`
+  DROP INDEX `uq_device_identity`,
+  ADD UNIQUE KEY `uq_device_identity` (`site_id`, `device_ip`);
+```
+
+## Writing idempotent DDL on MySQL
+
+`ADD COLUMN IF NOT EXISTS`, `DROP COLUMN IF EXISTS` and `DROP KEY IF EXISTS`
+are **MariaDB-only** and a syntax error on MySQL. Guard through
+`information_schema` and a prepared statement instead:
+
+```sql
+SET @stmt = (SELECT IF(
+    EXISTS(
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'master_floor'
+          AND COLUMN_NAME = 'image_url'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `master_floor` ADD COLUMN `image_url` VARCHAR(255) NULL'
+));
+
+--bun:split
+
+PREPARE add_image_url FROM @stmt;
+
+--bun:split
+
+EXECUTE add_image_url;
+
+--bun:split
+
+DEALLOCATE PREPARE add_image_url;
+```
+
+## The `.tx.` variant
+
+Append `.tx` before the suffix — `<version>_<name>.tx.up.sql` — to run the file
+inside a transaction. A plain `.up.sql` runs on the pinned connection without
+one.
+
+**MySQL/MariaDB caveat:** DDL auto-commits even inside a transaction, so `.tx.`
+gives no atomicity for schema changes — it only helps for DML.
+
+- **Schema/DDL changes:** plain `.up.sql`, written idempotently.
+- **Data migrations (INSERT/UPDATE/DELETE):** `.tx.up.sql`, so a failure rolls
+  the whole file back instead of leaving partial data.
+- A file that opens its own `START TRANSACTION; … COMMIT;` stays plain
+  `.up.sql` — don't nest it inside `.tx.`.
+
+## Rollback
+
+Migrations are **forward-only at runtime**: nothing runs a `.down.sql`
+automatically. Note that `Migrator.Rollback` marks every migration in the last
+group unapplied but only reverts the ones that actually shipped a down file —
+so a partial set of down files advertises a rollback that does not exist.
+Prefer shipping the reverse as a commented `ROLLBACK` block in the up file, and
+let an operator run it deliberately.

@@ -102,8 +102,20 @@ func (d *databaseGenerator) Init(databases []string) error {
 
 	data := template.Project{Module: module, Databases: merged}
 
+	// MariaDB brings the migration runner with it, so a project that adds the
+	// database later ends up identical to one created with it.
+	configs := getDatabaseConfig(rootDir, data)
+	for _, config := range getMigrationConfig(rootDir, data) {
+		// Never overwrite a runner the project has since edited, nor a baseline
+		// migration it may have replaced.
+		if d.FileX.IsExist(config.Path) {
+			continue
+		}
+		configs = append(configs, config)
+	}
+
 	spinner, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Initialize database %s", strings.Join(added, ", ")))
-	for _, config := range getDatabaseConfig(rootDir, data) {
+	for _, config := range configs {
 		dir := filepath.Dir(config.Path)
 		if err := d.FileX.EnsureDir(dir); err != nil {
 			spinner.Fail(err)
@@ -126,6 +138,12 @@ func (d *databaseGenerator) Init(databases []string) error {
 
 	if err := bindDatabaseWiring(d.FileX, rootDir, module); err != nil {
 		return err
+	}
+
+	if data.HasMariaDB() {
+		if err := bindStartupMigrations(d.FileX, rootDir); err != nil {
+			return err
+		}
 	}
 
 	// go mod tidy + wire

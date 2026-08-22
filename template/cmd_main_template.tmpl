@@ -38,6 +38,12 @@ func main() {
 			dbDriver := database.NewDatabaseDriver()
 			defer dbDriver.Close()
 {{- end }}
+{{- if .HasMariaDB }}
+
+			// Database migrations (always on; RUN_MIGRATIONS=false opts out).
+			database.StartupMigrations(dbDriver)
+{{- end }}
+
 			//+codegen:func main:database
 
 			apps := {{.PackageName}}.CreateApp({{if .HasDatabase}}dbDriver{{end}})

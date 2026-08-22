@@ -118,6 +118,9 @@ var DatabaseWireGenTemplate string
 //go:embed database_wire_template.tmpl
 var DatabaseWireTemplate string
 
+//go:embed database_migrations_template.tmpl
+var DatabaseMigrationsTemplate string
+
 // Deployments
 
 //go:embed deployments_api_compose_template.tmpl
@@ -198,6 +201,20 @@ var InternalGRPCClientTemplate string
 
 //go:embed makefile_template.tmpl
 var MakefileTemplate string
+
+// Migrations
+
+//go:embed migrations_embed_template.tmpl
+var MigrationsEmbedTemplate string
+
+//go:embed migrations_readme_template.tmpl
+var MigrationsReadmeTemplate string
+
+//go:embed migrations_init_sql_template.tmpl
+var MigrationsInitSQLTemplate string
+
+//go:embed migrations_sql_template.tmpl
+var MigrationsSQLTemplate string
 
 // Mod
 
